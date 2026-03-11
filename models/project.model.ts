@@ -14,11 +14,13 @@ export interface IProjectMember {
 
 export interface IProject extends Document {
     title: string;
+    projectId: string;
     description?: string;
     background?: string;
     avatar?: string;
     owner: IProjectMember;
     members: IProjectMember[];
+    isPublic: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -28,6 +30,13 @@ const ProjectSchema = new Schema<IProject>(
         title: {
             type: String,
             required: true,
+            trim: true,
+        },
+        projectId: {
+            type: String,
+            required: true,
+            unique: true,
+            index: true,
             trim: true,
         },
 
@@ -69,6 +78,10 @@ const ProjectSchema = new Schema<IProject>(
                 },
             },
         ],
+        isPublic: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,

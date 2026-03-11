@@ -1,0 +1,135 @@
+import { NextRequest, NextResponse } from "next/server"
+import { jwtVerify } from "jose"
+import { connectDB } from "@/lib/db"
+import Project, { ProjectRole } from "@/models/project.model"
+import { createProjectSchema } from "@/lib/validations/project.validation"
+
+const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
+
+async function getUserIdFromRequest(req: NextRequest) {
+    const token = req.cookies.get("accessToken")?.value
+    if (!token) return null
+
+    try {
+        const { payload } = await jwtVerify(token, SECRET)
+        const id = (payload.id || payload.userId) as string | undefined
+        return id ?? null
+    } catch {
+        return null
+    }
+}
+
+function slugify(input: string) {
+    const normalized = input
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+
+    return normalized || "project"
+}
+
+async function generateProjectId(title: string) {
+    const base = slugify(title)
+    let projectId = base
+    let counter = 1
+
+    while (await Project.exists({ projectId })) {
+        projectId = `${base}-${counter}`
+        counter += 1
+    }
+
+    return projectId
+}
+
+export async function GET(req: NextRequest) {
+    try {
+        const userId = await getUserIdFromRequest(req)
+        if (!userId) {
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+        }
+
+        await connectDB()
+
+        const projects = await Project.find({
+            $or: [{ "owner.userId": userId }, { "members.userId": userId }],
+        })
+            .select("title projectId isPublic createdAt")
+            .sort({ createdAt: -1 })
+
+        for (const project of projects) {
+            if (!project.projectId) {
+                project.projectId = await generateProjectId(project.title)
+                await project.save()
+            }
+        }
+
+        return NextResponse.json(projects)
+    } catch {
+        return NextResponse.json(
+            { message: "Không thể lấy danh sách dự án" },
+            { status: 500 }
+        )
+    }
+}
+
+export async function POST(req: NextRequest) {
+    try {
+        const userId = await getUserIdFromRequest(req)
+        if (!userId) {
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+        }
+
+        const body = await req.json()
+        const parsed = createProjectSchema.safeParse(body)
+        if (!parsed.success) {
+            return NextResponse.json(
+                { message: "Dữ liệu không hợp lệ", errors: parsed.error.flatten() },
+                { status: 400 }
+            )
+        }
+
+        const { title, description, visibility } = parsed.data
+
+        await connectDB()
+
+        const projectId = await generateProjectId(title)
+
+        const project = new Project({
+            title,
+            projectId,
+            description,
+            isPublic: visibility === "public",
+            owner: {
+                userId,
+                role: ProjectRole.ADMIN,
+                joinedAt: new Date(),
+            },
+            members: [
+                {
+                    userId,
+                    role: ProjectRole.ADMIN,
+                    joinedAt: new Date(),
+                },
+            ],
+        })
+        await project.save()
+
+        return NextResponse.json(
+            {
+                _id: project._id,
+                title: project.title,
+                projectId: project.projectId,
+                isPublic: project.isPublic,
+            },
+            { status: 201 }
+        )
+    } catch {
+        return NextResponse.json(
+            { message: "Không thể tạo dự án" },
+            { status: 500 }
+        )
+    }
+}
