@@ -134,11 +134,11 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
     const canAssignOthers = currentUserRole !== "Member"
     const assignHelperText =
         currentUserRole === "Member"
-            ? "Báº¡n chá»‰ cÃ³ thá»ƒ tá»± nháº­n task."
+            ? "Bạn chỉ có thể nhận task."
             : currentUserRole === "Leader"
-                ? "Leader cÃ³ thá»ƒ giao task cho thÃ nh viÃªn."
+                ? "Leader có thể giao task cho các thành viên Member."
                 : currentUserRole === "Admin"
-                    ? "Admin cÃ³ thá»ƒ giao task cho táº¥t cáº£ thÃ nh viÃªn."
+                    ? "Admin có thể giao task cho tất cả thành viên."
                     : ""
 
     return (
@@ -152,14 +152,10 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         name="title"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>TiÃªu Ä‘á»</FormLabel>
+                                <FormLabel>Tiêu đề</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Nháº­p tiÃªu Ä‘á» task..." {...field} />
+                                    <Input placeholder="Nhập tiêu đề task..." {...field} />
                                 </FormControl>
-                                {assignHelperText && (
-                                    <p className="text-xs text-muted-foreground">{assignHelperText}</p>
-                                )}
-                                <FormMessage />
                             </FormItem>
                         )}
                     />
@@ -170,9 +166,9 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         name="description"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>MÃ´ táº£</FormLabel>
+                                <FormLabel>Mô tả</FormLabel>
                                 <FormControl>
-                                    <Textarea placeholder="MÃ´ táº£ task..." {...field} />
+                                    <Textarea placeholder="Mô tả task..." {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -185,11 +181,11 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         name="status"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Tráº¡ng thÃ¡i</FormLabel>
+                                <FormLabel>Trạng thái</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Chá»n tráº¡ng thÃ¡i" />
+                                            <SelectValue placeholder="Chọn trạng thái" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -211,7 +207,10 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         name="assignees"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>NgÆ°á»i thá»±c hiá»‡n</FormLabel>
+                                <FormLabel>Người thực hiện</FormLabel>
+                                {assignHelperText && (
+                                    <p className="text-xs text-muted-foreground">{assignHelperText}</p>
+                                )}
                                 <Select
                                     onValueChange={(value) => field.onChange(value ? [value] : [])}
                                     value={field.value?.[0] ?? ""}
@@ -219,7 +218,7 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                                 >
                                     <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Chá»n ngÆ°á»i thá»±c hiá»‡n" />
+                                            <SelectValue placeholder="Chọn người thực hiện" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -241,11 +240,11 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         name="importance"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Äá»™ Æ°u tiÃªn</FormLabel>
+                                <FormLabel>Độ ưu tiên</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Chá»n Ä‘á»™ Æ°u tiÃªn" />
+                                            <SelectValue placeholder="Mức độ ưu tiên của dự án" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -267,7 +266,7 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         name="startDate"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>NgÃ y báº¯t Ä‘áº§u</FormLabel>
+                                <FormLabel>Ngày bắt đầu</FormLabel>
                                 <FormControl>
                                     <Input
                                         type="date"
@@ -287,7 +286,7 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         name="dueDate"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>NgÃ y káº¿t thÃºc</FormLabel>
+                                <FormLabel>Ngày kết thúc</FormLabel>
                                 <FormControl>
                                     <Input
                                         type="date"
@@ -307,7 +306,7 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         name="estimate"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Estimate (giá»)</FormLabel>
+                                <FormLabel>Giới hạn (giờ)</FormLabel>
                                 <FormControl>
                                     <Input
                                         type="number"
@@ -330,7 +329,7 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
 
                     {/* SUBMIT */}
                     <Button type="submit" disabled={loading}>
-                        {loading ? "Äang táº¡o..." : "Táº¡o Task"}
+                        {loading ? "Đang tạo..." : "Tạo Task"}
                     </Button>
                 </form>
             </Form>

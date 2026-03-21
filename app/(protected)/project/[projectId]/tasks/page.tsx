@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useParams } from "next/navigation"
 import { KanbanColumn } from "@/components/tasks/task-list"
 import { Task, TaskStatus } from "@/types/task"
-import { GET_METHOD } from "@/lib/req"
+import { GET_METHOD, PATCH_METHOD } from "@/lib/req"
 import { ApiTask, ApiResponse, ProjectInfo } from "@/types/project";
 
 const statusColumns: Array<{ title: string; status: TaskStatus }> = [
@@ -85,6 +85,8 @@ export default function ProjectTaskListPage() {
     const [project, setProject] = useState<ProjectInfo | null>(null)
     const [tasks, setTasks] = useState<Task[]>([])
     const [loading, setLoading] = useState(true)
+    const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null)
+    const boardRef = useRef<HTMLDivElement | null>(null)
 
     const [reloadKey, setReloadKey] = useState(0)
 
@@ -135,6 +137,79 @@ export default function ProjectTaskListPage() {
         }))
     }, [tasks])
 
+    const handleDragStart = (task: Task, event: React.DragEvent<HTMLDivElement>) => {
+        event.dataTransfer.setData("text/task-id", task.id)
+        event.dataTransfer.setData("text/task-status", task.status)
+        event.dataTransfer.effectAllowed = "move"
+    }
+
+    const handleDragEnd = () => {
+        setDragOverStatus(null)
+    }
+
+    const handleDragOver = (status: TaskStatus, event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault()
+        setDragOverStatus(status)
+        event.dataTransfer.dropEffect = "move"
+        const board = boardRef.current
+        if (!board) return
+        const rect = board.getBoundingClientRect()
+        const edgeThreshold = 80
+        const speed = 20
+        if (event.clientX - rect.left < edgeThreshold) {
+            board.scrollLeft -= speed
+        } else if (rect.right - event.clientX < edgeThreshold) {
+            board.scrollLeft += speed
+        }
+    }
+
+    const handleDragLeave = (status: TaskStatus, event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault()
+        if (dragOverStatus === status) {
+            setDragOverStatus(null)
+        }
+    }
+
+    const handleDrop = async (status: TaskStatus, event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault()
+        setDragOverStatus(null)
+        const taskId = event.dataTransfer.getData("text/task-id")
+        const fromStatus = event.dataTransfer.getData("text/task-status") as TaskStatus
+
+        if (!taskId || !fromStatus || fromStatus === status) return
+
+        const task = tasks.find((item) => item.id === taskId)
+        if (!task) return
+
+        if (
+            fromStatus === TaskStatus.BACKLOG &&
+            status === TaskStatus.TODO &&
+            (!task.assigneeIds || task.assigneeIds.length === 0)
+        ) {
+            window.alert("Cáº§n gáº¯n assignee trÆ°á»›c khi chuyá»ƒn sang Todo.")
+            return
+        }
+
+        const previousStatus = task.status
+        setTasks((prev) =>
+            prev.map((item) =>
+                item.id === taskId ? { ...item, status } : item
+            )
+        )
+
+        try {
+            await PATCH_METHOD(`/api/task/${taskId}`, { status })
+            window.dispatchEvent(new Event("task:updated"))
+        } catch {
+            setTasks((prev) =>
+                prev.map((item) =>
+                    item.id === taskId ? { ...item, status: previousStatus } : item
+                )
+            )
+            window.alert("Cáº­p nháº­t tráº¡ng thái tháº¥t báº¡i. Vui lòng thá»­ láº¡i.")
+        }
+    }
+
     return (
         <div className="space-y-6">
             <section className="space-y-2">
@@ -155,13 +230,19 @@ export default function ProjectTaskListPage() {
             </section>
 
             <section>
-                <div className="flex gap-4 overflow-x-auto pb-2">
+                <div ref={boardRef} className="flex gap-4 overflow-x-auto pb-2">
                     {columns.map((column) => (
                         <KanbanColumn
                             key={column.status}
                             title={column.title}
                             status={column.status}
                             tasks={column.tasks}
+                            isDragOver={dragOverStatus === column.status}
+                            onTaskDragStart={handleDragStart}
+                            onTaskDragEnd={handleDragEnd}
+                            onTaskDragOver={handleDragOver}
+                            onTaskDragLeave={handleDragLeave}
+                            onTaskDrop={handleDrop}
                         />
                     ))}
                 </div>

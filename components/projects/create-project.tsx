@@ -69,10 +69,10 @@ export default function CreateProject({ onSuccessAction }: CreateProjectProps) {
                         name="title"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Project name</FormLabel>
+                                <FormLabel>Tên dự án</FormLabel>
 
                                 <FormControl>
-                                    <Input placeholder="Project name" {...field} />
+                                    <Input placeholder="Nhập tên dự án" {...field} />
                                 </FormControl>
 
                                 <FormMessage />
@@ -86,11 +86,11 @@ export default function CreateProject({ onSuccessAction }: CreateProjectProps) {
                         name="description"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Description</FormLabel>
+                                <FormLabel>Mô tả</FormLabel>
 
                                 <FormControl>
                                     <Textarea
-                                        placeholder="Project description"
+                                        placeholder="Mô tả một chút về dự án của bạn"
                                         {...field}
                                     />
                                 </FormControl>
@@ -107,10 +107,10 @@ export default function CreateProject({ onSuccessAction }: CreateProjectProps) {
                         render={({ field }) => (
                             <FormItem className="flex items-center justify-between border rounded-lg p-4">
                                 <div>
-                                    <FormLabel>Public project</FormLabel>
+                                    <FormLabel>Công khai</FormLabel>
 
                                     <p className="text-sm text-muted-foreground">
-                                        Anyone in workspace can join
+                                        Mọi người có thể tham gia dự án qua đường dẫn
                                     </p>
                                 </div>
 
@@ -137,7 +137,7 @@ export default function CreateProject({ onSuccessAction }: CreateProjectProps) {
                         className="w-full"
                         disabled={form.formState.isSubmitting}
                     >
-                        {form.formState.isSubmitting ? "Äang táº¡o..." : "Create project"}
+                        {form.formState.isSubmitting ? "Đang tạo ... " : "Tạo dự án"}
                     </Button>
                 </form>
             </Form>

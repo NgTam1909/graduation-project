@@ -48,7 +48,7 @@ export default function RegisterForm() {
 
         setFieldErrors({})
         if (form.password !== form.confirmPassword) {
-            const message = "Máº­t kháº©u xÃ¡c nháº­n khÃ´ng khá»›p"
+            const message = "Mật khẩu xác nhận không đúng!"
             setFieldErrors((prev) => ({ ...prev, confirmPassword: message }))
             setError(message)
             return
@@ -58,7 +58,7 @@ export default function RegisterForm() {
             setLoading(true)
             await POST_METHOD("/api/auth/register", form)
 
-            setSuccess("ÄÄƒng kÃ½ thÃ nh cÃ´ng! Äang chuyá»ƒn sang trang Ä‘Äƒng nháº­p...")
+            setSuccess("Đăng ký thành công! Đang chuyển sang trang đăng nhập ...")
 
             setTimeout(() => {
                 router.push("/login")
@@ -89,9 +89,9 @@ export default function RegisterForm() {
                 }
 
                 setFieldErrors(nextFieldErrors)
-                setError(firstMessage || payload?.message || "ÄÄƒng kÃ½ tháº¥t báº¡i")
+                setError(firstMessage || payload?.message || "Đăng ký thất bại!")
             } else {
-                setError(payload?.message || "ÄÄƒng kÃ½ tháº¥t báº¡i")
+                setError(payload?.message || "Đăng ký thất bại!")
             }
         } finally {
             setLoading(false)
@@ -103,29 +103,29 @@ export default function RegisterForm() {
             <Card className="w-full max-w-md shadow-xl border-0 rounded-2xl">
                 <CardHeader>
                     <CardTitle className="text-2xl font-semibold text-center">
-                        Táº¡o tÃ i khoáº£n
+                        Tạo tài khoản mới
                     </CardTitle>
                 </CardHeader>
 
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-2">
-                            <Label>Há»</Label>
+                            <Label>Họ</Label>
                             <Input
                                 value={form.lastName}
                                 onChange={(e) => handleChange("lastName", e.target.value)}
-                                placeholder="Nháº­p há»"
+                                placeholder="Nhập họ của bạn"
                             />
                             {fieldErrors.lastName && (
                                 <p className="text-xs text-red-500">{fieldErrors.lastName}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label>TÃªn</Label>
+                            <Label>Tên</Label>
                             <Input
                                 value={form.firstName}
                                 onChange={(e) => handleChange("firstName", e.target.value)}
-                                placeholder="Nháº­p tÃªn"
+                                placeholder="Nhập tên của bạn"
                             />
                             {fieldErrors.firstName && (
                                 <p className="text-xs text-red-500">{fieldErrors.firstName}</p>
@@ -144,7 +144,7 @@ export default function RegisterForm() {
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label>Sá»‘ Ä‘iá»‡n thoáº¡i</Label>
+                            <Label>Số điện thoại</Label>
                             <Input
                                 type="tel"
                                 inputMode="numeric"
@@ -158,12 +158,12 @@ export default function RegisterForm() {
                             )}
                         </div>
                         <div className="space-y-2 relative">
-                            <Label>Máº­t kháº©u</Label>
+                            <Label>Mật khẩu</Label>
                             <Input
                                 type={showPassword ? "text" : "password"}
                                 value={form.password}
                                 onChange={(e) => handleChange("password", e.target.value)}
-                                placeholder="Nháº­p máº­t kháº©u"
+                                placeholder="Nhập mật khẩu"
                             />
                             <button
                                 type="button"
@@ -177,14 +177,14 @@ export default function RegisterForm() {
                             )}
                         </div>
                         <div className="space-y-2 relative">
-                            <Label>XÃ¡c nháº­n máº­t kháº©u</Label>
+                            <Label>Xác nhận mật khẩu</Label>
                             <Input
                                 type={showConfirmPassword ? "text" : "password"}
                                 value={form.confirmPassword}
                                 onChange={(e) =>
                                     handleChange("confirmPassword", e.target.value)
                                 }
-                                placeholder="Nháº­p láº¡i máº­t kháº©u"
+                                placeholder="Nhập lại mật khẩu"
                             />
                             <button
                                 type="button"
@@ -218,13 +218,13 @@ export default function RegisterForm() {
                             className="w-full rounded-xl"
                             disabled={loading}
                         >
-                            {loading ? "Äang Ä‘Äƒng kÃ½..." : "ÄÄƒng kÃ½"}
+                            {loading ? "Đang đăng ký ..." : "Đăng ký"}
                         </Button>
 
                         <p className="text-sm text-center text-muted-foreground">
-                            ÄÃ£ cÃ³ tÃ i khoáº£n?{" "}
+                            Đã có tài khoản?{" "}
                             <a href="/login" className="underline cursor-pointer">
-                                ÄÄƒng nháº­p
+                                Đăng nhập
                             </a>
                         </p>
                     </form>

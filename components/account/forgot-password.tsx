@@ -27,7 +27,7 @@ export function ForgotPasswordForm() {
         try {
             await POST_METHOD('/api/forgot-password', { email });
 
-            toast.success("ÄÃ£ gá»­i link Ä‘á»•i máº­t kháº©u! Vui lÃ²ng kiá»ƒm tra Email.");
+            toast.success("Đã gửi link đặt lại mật khẩu. Vui lòng kiểm tra hòm thư email");
 
             setTimeout(() => {
                 router.push('/login');
@@ -35,7 +35,7 @@ export function ForgotPasswordForm() {
 
         } catch (err: unknown) {
             const payload = (err as { response?: { data?: { message?: string } } })?.response?.data;
-            setError(payload?.message ?? "CÃ³ lá»—i xáº£y ra, vui lÃ²ng thá»­ láº¡i.");
+            setError(payload?.message ?? "Có lỗi xảy ra. Vui lòng thử lại");
         } finally {
             setLoading(false);
         }
@@ -45,10 +45,10 @@ export function ForgotPasswordForm() {
         <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl overflow-hidden rounded-xl w-full max-w-md">
             <CardHeader className="text-center pb-6 border-b border-slate-100 dark:border-slate-800/50 pt-6">
                 <div className="text-xl font-bold text-slate-900 dark:text-white">
-                    QuÃªn máº­t kháº©u?
+                    Quên mật khẩu?
                 </div>
                 <div className="text-sm text-slate-500 dark:text-slate-400 mt-2 px-4">
-                    Nháº­p email cá»§a báº¡n vÃ  chÃºng tÃ´i sáº½ gá»­i hÆ°á»›ng dáº«n Ä‘áº·t láº¡i máº­t kháº©u.
+                    Nhập email của bạn và chúng tôi sẽ hướng dẫn đặt lại mật khẩu.
                 </div>
             </CardHeader>
 
@@ -57,7 +57,7 @@ export function ForgotPasswordForm() {
 
                     <div className="space-y-2">
                         <Label htmlFor="email" className="text-slate-700 dark:text-slate-300 font-semibold">
-                            Äá»‹a chá»‰ Email
+                            Địa chỉ Email
                         </Label>
                         <div className="relative group">
                             <Mail className="absolute left-3.5 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
@@ -92,12 +92,12 @@ export function ForgotPasswordForm() {
                         className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold text-base rounded-lg shadow-md shadow-orange-500/20 transition-all active:scale-[0.98]"
                         disabled={loading}
                     >
-                        {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <span className="flex items-center gap-2">Gá»­i yÃªu cáº§u <Send className="h-4 w-4" /></span>}
+                        {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <span className="flex items-center gap-2">Gửi yêu cầu <Send className="h-4 w-4" /></span>}
                     </Button>
 
                     <div className="text-center">
                         <Link href="/login" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-orange-600 dark:hover:text-orange-500 transition-colors font-medium">
-                            <ArrowLeft className="h-4 w-4" /> Quay láº¡i Ä‘Äƒng nháº­p
+                            <ArrowLeft className="h-4 w-4" /> Quay lại trang đăng nhập
                         </Link>
                     </div>
 

@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from "react"
-import { Search, Bell, HelpCircle, User, Menu } from 'lucide-react';
+import {Search, Bell, HelpCircle, User, ArrowRight} from 'lucide-react';
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useHydrated } from "@/hooks/use-hydrated";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -19,7 +19,7 @@ import {
 import { GET_METHOD, POST_METHOD } from "@/lib/req";
 import { ActivityLog } from "@/types/activity-log";
 
-/* thÃªm type props */
+/* type props */
 type NavMenuProps = {
     onToggleSidebarAction?: () => void
     className?: string
@@ -29,7 +29,6 @@ export default function NavMenu({
     onToggleSidebarAction,
     className,
 }: NavMenuProps) {
-    const mounted = useHydrated()
     const pathname = usePathname()
     const projectId = useMemo(() => {
         if (!pathname) return null
@@ -41,23 +40,23 @@ export default function NavMenu({
     const [logsError, setLogsError] = useState<string | null>(null)
 
     const actionLabels: Record<string, string> = {
-        CREATE_PROJECT: "Tạo project",
-        UPDATE_PROJECT: "Cập nhật project",
-        DELETE_PROJECT: "Xóa project",
+        CREATE_PROJECT: "Tạo dự án",
+        UPDATE_PROJECT: "Cập nhật dự án",
+        DELETE_PROJECT: "Xóa dự án",
         INVITE_MEMBER: "Mời thành viên",
-        CHANGE_ROLE: "Đổi vai trò",
-        CREATE_TASK: "Tạo task",
-        UPDATE_TASK: "Cập nhật task",
-        UPDATE_TASK_STATUS: "Đổi trạng thái task",
+        CHANGE_ROLE: "Thay đổi vai trò",
+        CREATE_TASK: "Tạo công việc",
+        UPDATE_TASK: "Cập nhật công việc",
+        UPDATE_TASK_STATUS: "Cập nhật trạng thái công việc",
     }
 
     const fieldLabels: Record<string, string> = {
         title: "Tiêu đề",
         description: "Mô tả",
         status: "Trạng thái",
-        importance: "Mức độ",
+        importance: "Độ ưu tiên",
         labels: "Nhãn",
-        estimate: "Estimate",
+        estimate: "Giới hạn",
         assignees: "Người thực hiện",
         startDate: "Ngày bắt đầu",
         dueDate: "Ngày kết thúc",
@@ -160,14 +159,15 @@ export default function NavMenu({
                 {/* LEFT */}
                 <div className="flex items-center gap-3">
 
-                    {/* nÃºt toggle sidebar */}
+                    {/* nút toggle sidebar */}
                     {onToggleSidebarAction && (
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={onToggleSidebarAction}
+                            aria-label="Mở sidebar"
                         >
-                            <Menu size={20} />
+                            <Image src="/logo.svg" alt="Logo" width={20} height={20} />
                         </Button>
                     )}
 
@@ -192,7 +192,7 @@ export default function NavMenu({
 
                     <DropdownMenu onOpenChange={handleNotificationOpenChange}>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="Thông báo">
+                            <Button variant="ghost" size="icon" aria-label="ThÃ´ng bÃ¡o">
                                 <Bell size={20} />
                             </Button>
                         </DropdownMenuTrigger>
@@ -233,7 +233,7 @@ export default function NavMenu({
                                                 </div>
                                                 <div className="text-xs text-muted-foreground">
                                                     {(log.user?.name ?? "Hệ thống") +
-                                                        " • " +
+                                                        " - " +
                                                         formatLogTime(log.createdAt)}
                                                 </div>
                                                 {changes.length > 0 && (
@@ -243,7 +243,7 @@ export default function NavMenu({
                                                                 <span className="font-medium text-foreground/80">
                                                                     {change.label}:
                                                                 </span>{" "}
-                                                                {change.from} → {change.to}
+                                                                {change.from} <ArrowRight size={12} className="text-muted-foreground" /> {change.to}
                                                             </div>
                                                         ))}
                                                     </div>
@@ -258,32 +258,26 @@ export default function NavMenu({
 
                     <Separator orientation="vertical" className="h-6" />
 
-                    {mounted ? (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <User size={20} />
-                                </Button>
-                            </DropdownMenuTrigger>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" aria-label="User menu">
+                                <User size={20} />
+                            </Button>
+                        </DropdownMenuTrigger>
 
-                            <DropdownMenuContent align="end" className="w-40">
-                                <DropdownMenuItem>
-                                    Quáº£n lÃ½ tÃ i khoáº£n
-                                </DropdownMenuItem>
+                        <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem>
+                                Quản lý tài khoản
+                            </DropdownMenuItem>
 
-                                <DropdownMenuItem
-                                    className="text-red-500"
-                                    onClick={handleLogout}
-                                >
-                                    ÄÄƒng xuáº¥t
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    ) : (
-                        <Button variant="ghost" size="icon" aria-label="User menu">
-                            <User size={20} />
-                        </Button>
-                    )}
+                            <DropdownMenuItem
+                                className="text-red-500"
+                                onClick={handleLogout}
+                            >
+                                Đăng xuất
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
                 </div>
 

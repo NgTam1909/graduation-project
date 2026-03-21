@@ -163,7 +163,7 @@ export default function NavProjects() {
                         <SidebarMenuButton asChild>
                             <Link href="/tasks">
                                 <CheckSquare size={16} />
-                                <span>CÃ´ng viá»‡c cá»§a tÃ´i</span>
+                                <span>Công việc của tôi</span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -171,13 +171,13 @@ export default function NavProjects() {
             </SidebarGroup>
 
             <SidebarGroup>
-                <SidebarGroupLabel>Dá»± Ã¡n</SidebarGroupLabel>
+                <SidebarGroupLabel>Dự án</SidebarGroupLabel>
                 <SidebarMenu>
                     {loading && (
                         <SidebarMenuItem>
                             <SidebarMenuButton disabled>
                                 <Folder size={16} />
-                                <span>Loading...</span>
+                                <span>Đang tải...</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                     )}
@@ -186,7 +186,7 @@ export default function NavProjects() {
                         <SidebarMenuItem>
                             <SidebarMenuButton disabled>
                                 <Folder size={16} />
-                                <span>ChÆ°a cÃ³ dá»± Ã¡n tá»“n táº¡i</span>
+                                <span>Chưa có dự án tồn tại</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                     )}
@@ -213,12 +213,12 @@ export default function NavProjects() {
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem onSelect={() => openMembersDialog(project)}>
                                                 <BookUser size={14} className="mr-2" />
-                                                ThÃ nh viÃªn
+                                                Thành viên
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
                                                 onSelect={() => openSettingsDialog(project)}
                                             >
-                                                Settings
+                                                Cập nhật
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
                                                 className="text-red-500"
@@ -244,7 +244,7 @@ export default function NavProjects() {
                                             type="button"
                                             className="p-2 rounded-lg hover:bg-muted transition"
                                             onClick={() => openTaskDialog(project)}
-                                            aria-label="Táº¡o task"
+                                            aria-label="Tạo task"
                                         >
                                             <Plus size={16} />
                                         </button>
@@ -255,8 +255,7 @@ export default function NavProjects() {
                                         onClick={() => openMembersDialog(project)}
                                         className="flex w-full items-center gap-2 p-2 rounded-lg hover:bg-muted transition text-sm text-left"
                                     >
-                                        <BookUser size={16} />
-                                        ThÃ nh viÃªn dá»± Ã¡n
+                                        Thống kê
                                     </button>
                                 </CollapsibleContent>
                             </Collapsible>
@@ -272,12 +271,12 @@ export default function NavProjects() {
                                 <DialogTrigger asChild>
                                     <SidebarMenuButton>
                                         <Plus size={16} />
-                                        <span>Táº¡o dá»± Ã¡n má»›i</span>
+                                        <span>Tạo dự án mới</span>
                                     </SidebarMenuButton>
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-lg">
                                     <DialogHeader>
-                                        <DialogTitle>Táº¡o dá»± Ã¡n má»›i</DialogTitle>
+                                        <DialogTitle>Tạo dự án mới</DialogTitle>
                                     </DialogHeader>
                                     <CreateProject onSuccessAction={handleCreated} />
                                 </DialogContent>
@@ -285,7 +284,7 @@ export default function NavProjects() {
                         ) : (
                             <SidebarMenuButton>
                                 <Plus size={16} />
-                                <span>Táº¡o dá»± Ã¡n má»›i</span>
+                                <span>Tạo dự án mới</span>
                             </SidebarMenuButton>
                         )}
                     </SidebarMenuItem>
@@ -305,8 +304,8 @@ export default function NavProjects() {
                     <DialogHeader>
                         <DialogTitle>
                             {taskDialogProjectTitle
-                                ? `Táº¡o task - ${taskDialogProjectTitle}`
-                                : "Táº¡o task"}
+                                ? `Tạo task - ${taskDialogProjectTitle}`
+                                : "Tạo task"}
                         </DialogTitle>
                     </DialogHeader>
                     {taskDialogProjectId && (

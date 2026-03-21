@@ -321,7 +321,7 @@ export function TaskDetail({ task }: TaskDetailProps) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-start justify-between relative" ref={dropdownRef}>
-                        <span className="text-sm text-muted-foreground">Assignees</span>
+                        <span className="text-sm text-muted-foreground">Người thực hiện</span>
 
                         <div className="relative">
                             <button
@@ -359,7 +359,7 @@ export function TaskDetail({ task }: TaskDetailProps) {
                                             ))
                                         ) : (
                                             <div className="px-3 py-2 text-sm text-muted-foreground text-center">
-                                                KhÃ´ng cÃ³ ngÆ°á»i dÃ¹ng
+                                                Không có người thực hiện
                                             </div>
                                         )}
                                     </div>
@@ -369,7 +369,7 @@ export function TaskDetail({ task }: TaskDetailProps) {
                     </div>
 
                     <div className="flex items-start justify-between">
-                        <span className="text-sm text-muted-foreground">Start date</span>
+                        <span className="text-sm text-muted-foreground">Ngày bắt đầu</span>
                         <div className="flex items-center gap-2 text-sm">
                             <button
                                 type="button"
@@ -383,7 +383,7 @@ export function TaskDetail({ task }: TaskDetailProps) {
                                 }}
                             >
                                 <Calendar size={14} className="text-muted-foreground" />
-                                <span>{startDateValue || "ChÆ°a Ä‘áº·t"}</span>
+                                <span>{startDateValue || "Chưa đặt"}</span>
                             </button>
                             <Input
                                 ref={startDateRef}
@@ -397,7 +397,7 @@ export function TaskDetail({ task }: TaskDetailProps) {
                     </div>
 
                     <div className="flex items-start justify-between">
-                        <span className="text-sm text-muted-foreground">Due date</span>
+                        <span className="text-sm text-muted-foreground">Ngày kết thúc</span>
                         <div className="flex items-center gap-2 text-sm">
                             <button
                                 type="button"
@@ -411,7 +411,7 @@ export function TaskDetail({ task }: TaskDetailProps) {
                                 }}
                             >
                                 <Calendar size={14} className="text-muted-foreground" />
-                                <span>{dueDateValue || "ChÆ°a Ä‘áº·t"}</span>
+                                <span>{dueDateValue || "Chưa đặt"}</span>
                             </button>
                             <Input
                                 ref={dueDateRef}
@@ -427,7 +427,7 @@ export function TaskDetail({ task }: TaskDetailProps) {
                     <Separator />
 
                     <div className="flex items-start justify-between">
-                        <span className="text-sm text-muted-foreground">Estimate</span>
+                        <span className="text-sm text-muted-foreground">Giới hạn (giờ)</span>
                         <div className="flex items-center gap-2 text-sm">
                             <button
                                 type="button"
@@ -436,7 +436,7 @@ export function TaskDetail({ task }: TaskDetailProps) {
                             >
                                 <Clock size={14} className="text-muted-foreground" />
                                 <span>
-                                    {estimateValue ? `${estimateValue}h` : "ChÆ°a nháº­p"}
+                                    {estimateValue ? `${estimateValue}h` : "Chưa nhập"}
                                 </span>
                             </button>
                             {isEditingEstimate && (
@@ -457,13 +457,13 @@ export function TaskDetail({ task }: TaskDetailProps) {
                     </div>
 
                     <div className="flex items-start justify-between">
-                        <span className="text-sm text-muted-foreground">Labels</span>
+                        <span className="text-sm text-muted-foreground">Nhãn</span>
                         <div className="flex items-center gap-2 text-sm">
                             <Tag size={14} className="text-muted-foreground" />
                             <span>
                                 {task.labels && task.labels.length > 0
                                     ? task.labels.join(", ")
-                                    : "ChÆ°a gáº¯n"}
+                                    : "Chưa gán"}
                             </span>
                         </div>
                     </div>
@@ -471,12 +471,12 @@ export function TaskDetail({ task }: TaskDetailProps) {
                     <Separator />
 
                     <div className="flex items-start justify-between">
-                        <span className="text-sm text-muted-foreground">Created</span>
+                        <span className="text-sm text-muted-foreground">Ngày tạo:</span>
                         <span className="text-sm">{task.createdAt ?? "N/A"}</span>
                     </div>
 
                     <div className="flex items-start justify-between">
-                        <span className="text-sm text-muted-foreground">Updated</span>
+                        <span className="text-sm text-muted-foreground">Cập nhật:</span>
                         <span className="text-sm">{task.updatedAt ?? "N/A"}</span>
                     </div>
                     {savingField && (

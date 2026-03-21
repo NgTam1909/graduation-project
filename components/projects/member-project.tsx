@@ -67,7 +67,7 @@ export function MemberDialog({
                     setMembers(Array.isArray(data.members) ? data.members : []);
                     setCurrentRole(data.currentRole ?? null);
                 } catch (error) {
-                    console.error("Failed to load members:", error);
+                    console.error("Không tìm thấy thành viên:", error);
                     setMembers([]);
                     setCurrentRole(null);
                 } finally {
@@ -112,7 +112,7 @@ export function MemberDialog({
         if (!projectId) return;
         const email = inviteEmail.trim().toLowerCase();
         if (!email) {
-            setInviteError("Email is required");
+            setInviteError("Vui lòng nhập email");
             return;
         }
         setInviteLoading(true);
@@ -120,11 +120,11 @@ export function MemberDialog({
         setInviteSuccess(null);
         try {
             await POST_METHOD(`/api/projects/${projectId}/invites`, { email });
-            setInviteSuccess("Invite sent");
+            setInviteSuccess("Đã gửi lời mời");
             setInviteEmail("");
         } catch (err: unknown) {
             const payload = (err as { response?: { data?: { message?: string } } })?.response?.data;
-            setInviteError(payload?.message ?? "Failed to send invite");
+            setInviteError(payload?.message ?? "Gửi lời mời thất bại");
         } finally {
             setInviteLoading(false);
         }
@@ -147,7 +147,7 @@ export function MemberDialog({
             );
         } catch (err: unknown) {
             const payload = (err as { response?: { data?: { message?: string } } })?.response?.data;
-            setRoleError(payload?.message ?? "Failed to update role");
+            setRoleError(payload?.message ?? "Cập nhật quyền điều khiển thất bại");
         } finally {
             setRoleSavingId(null);
         }
@@ -159,30 +159,30 @@ export function MemberDialog({
                 <DialogHeader>
                     <DialogTitle>
                         {projectTitle
-                            ? `Members - ${projectTitle}`
-                            : "Project Members"}
+                            ? `Thành viên - ${projectTitle}`
+                            : "Thành viên dự án"}
                     </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-5">
                     {isPublic ? (
                         <div className="space-y-2 rounded-lg border p-3">
-                            <div className="text-sm font-medium">Share link</div>
+                            <div className="text-sm font-medium">Chia sẻ</div>
                             <div className="flex gap-2">
                                 <Input readOnly value={shareLink} />
                                 <Button type="button" variant="outline" onClick={handleCopy}>
-                                    Copy
+                                    Sao chép
                                 </Button>
                             </div>
                             {copyStatus && (
                                 <div className="text-xs text-muted-foreground">{copyStatus}</div>
                             )}
                             <div className="text-xs text-muted-foreground">
-                                Anyone with this link can request to join.
+                                Mọi người có thể tham gia dự án qua đường dẫn
                             </div>
                         </div>
                     ) : (
                         <div className="space-y-2 rounded-lg border p-3">
-                            <div className="text-sm font-medium">Invite by email</div>
+                            <div className="text-sm font-medium">Lời mời qua email</div>
                             {canInvite ? (
                                 <>
                                     <div className="flex gap-2">
@@ -197,7 +197,7 @@ export function MemberDialog({
                                             onClick={handleInvite}
                                             disabled={inviteLoading}
                                         >
-                                            {inviteLoading ? "Sending..." : "Send"}
+                                            {inviteLoading ? "Đang gửi..." : "Gửi"}
                                         </Button>
                                     </div>
                                     {inviteError && (
@@ -209,16 +209,16 @@ export function MemberDialog({
                                 </>
                             ) : (
                                 <div className="text-xs text-muted-foreground">
-                                    Only admin or leader can invite members.
+                                    Chỉ có Admin và Leader có thể mời thành viên
                                 </div>
                             )}
                         </div>
                     )}
                     {loading && (
-                        <p className="text-sm text-muted-foreground">Loading...</p>
+                        <p className="text-sm text-muted-foreground">Đang tải...</p>
                     )}
                     {!loading && members.length === 0 && (
-                        <p className="text-sm text-muted-foreground">No members found.</p>
+                        <p className="text-sm text-muted-foreground">Không có thành viên.</p>
                     )}
                     {!loading &&
                         members.map((member) => (
@@ -257,7 +257,7 @@ export function MemberDialog({
                             </div>
                         ))}
                     {roleSavingId && (
-                        <div className="text-xs text-muted-foreground">Saving role...</div>
+                        <div className="text-xs text-muted-foreground">Đang lưu...</div>
                     )}
                     {roleError && <div className="text-xs text-red-500">{roleError}</div>}
                 </div>

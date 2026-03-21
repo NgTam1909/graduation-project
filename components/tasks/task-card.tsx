@@ -10,13 +10,21 @@ import { TaskDetail } from "./task-detail";
 
 interface Props {
     task: Task;
+    draggable?: boolean;
+    onDragStart?: (task: Task, event: React.DragEvent<HTMLDivElement>) => void;
+    onDragEnd?: (task: Task, event: React.DragEvent<HTMLDivElement>) => void;
 }
 
-export function TaskCard({ task }: Props) {
+export function TaskCard({ task, draggable, onDragStart, onDragEnd }: Props) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Card className="mb-3 hover:shadow-md transition cursor-pointer">
+                <Card
+                    className="mb-3 hover:shadow-md transition cursor-pointer"
+                    draggable={draggable}
+                    onDragStart={(event) => onDragStart?.(task, event)}
+                    onDragEnd={(event) => onDragEnd?.(task, event)}
+                >
                     <CardContent className="p-4 space-y-3">
                         {/* Code */}
                         <p className="text-xs text-muted-foreground">{task.code}</p>
@@ -64,7 +72,7 @@ export function TaskCard({ task }: Props) {
             </DialogTrigger>
             <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
                 <DialogHeader>
-                    <DialogTitle>Task detail</DialogTitle>
+                    <DialogTitle>Chi tiết công việc</DialogTitle>
                 </DialogHeader>
                 <div className="min-h-0 flex-1 overflow-y-auto pr-1">
                     <TaskDetail task={task} />
