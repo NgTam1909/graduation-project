@@ -15,7 +15,7 @@ const statusColumns: Array<{ title: string; status: TaskStatus }> = [
     { title: "Cancelled", status: TaskStatus.CANCELLED },
 ]
 
-function toTask(item: ApiTask): Task {
+function toTask(item: ApiTask, projectId?: string): Task {
     const code = `TSK-${item._id.slice(-6).toUpperCase()}`
     const priority =
         item.importance === "low" || item.importance === "medium" || item.importance === "high"
@@ -28,24 +28,46 @@ function toTask(item: ApiTask): Task {
     const dueDate = item.dueDate
         ? new Date(item.dueDate).toLocaleDateString("vi-VN")
         : undefined
+    const toLocalDateValue = (value?: string | null) => {
+        if (!value) return undefined
+        const date = new Date(value)
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, "0")
+        const day = String(date.getDate()).padStart(2, "0")
+        return `${year}-${month}-${day}`
+    }
+
+    const startDateValue = toLocalDateValue(item.startDate)
+    const dueDateValue = toLocalDateValue(item.dueDate)
 
     const assignees = Array.isArray(item.assignees)
-        ? item.assignees.map((a) =>
-              typeof a === "string" ? a : a.name || a.email || "User"
-          )
+        ? item.assignees.map((a) => {
+              if (typeof a === "string") return a
+              const fullName = `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim()
+              return fullName || a.name || a.email || "User"
+          })
+        : undefined
+    const assigneeIds = Array.isArray(item.assignees)
+        ? item.assignees
+              .map((a) => (typeof a === "string" ? a : a._id))
+              .filter((id): id is string => !!id)
         : undefined
 
     return {
         id: item._id,
+        projectId,
         code,
         title: item.title,
         status: item.status,
         priority,
         description: item.description ?? undefined,
         assignees,
+        assigneeIds,
         labels: item.labels,
         startDate,
         dueDate,
+        startDateValue,
+        dueDateValue,
         estimate: item.estimate ?? undefined,
         createdAt: item.createdAt
             ? new Date(item.createdAt).toLocaleString("vi-VN")
@@ -69,7 +91,11 @@ export default function ProjectTaskListPage() {
     useEffect(() => {
         const handler = () => setReloadKey((key) => key + 1)
         window.addEventListener("task:created", handler)
-        return () => window.removeEventListener("task:created", handler)
+        window.addEventListener("task:updated", handler)
+        return () => {
+            window.removeEventListener("task:created", handler)
+            window.removeEventListener("task:updated", handler)
+        }
     }, [])
 
     useEffect(() => {
@@ -81,7 +107,9 @@ export default function ProjectTaskListPage() {
                 const data = (await GET_METHOD(`/api/projects/${projectId}/tasks`)) as ApiResponse
                 if (!active) return
                 setProject(data?.project ?? null)
-                const mapped = Array.isArray(data?.tasks) ? data.tasks.map(toTask) : []
+                const mapped = Array.isArray(data?.tasks)
+                    ? data.tasks.map((task) => toTask(task, projectId))
+                    : []
                 setTasks(mapped)
             } catch {
                 if (active) {

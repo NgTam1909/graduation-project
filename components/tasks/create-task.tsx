@@ -83,11 +83,15 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                 setCurrentUserId(data.currentUserId)
                 setCurrentUserRole(data.currentUserRole)
 
-                if (data.currentUserId) {
-                    const defaultAssignees = [data.currentUserId]
-                    form.setValue("assignees", defaultAssignees, {
+                if (data.currentUserRole === "Member" && data.currentUserId) {
+                    form.setValue("assignees", [data.currentUserId], {
                         shouldValidate: true,
                         shouldDirty: true,
+                    })
+                } else {
+                    form.setValue("assignees", [], {
+                        shouldValidate: false,
+                        shouldDirty: false,
                     })
                 }
             } catch {
@@ -118,7 +122,10 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                 startDate: "",
                 dueDate: "",
                 estimate: undefined,
-                assignees: currentUserId ? [currentUserId] : [],
+                assignees:
+                    currentUserRole === "Member" && currentUserId
+                        ? [currentUserId]
+                        : [],
             })
             onCreatedAction?.()
         }

@@ -89,8 +89,7 @@ export async function POST(req: NextRequest) {
             assignableIds = allIds
         }
 
-        const requestedAssignees =
-            data.assignees && data.assignees.length > 0 ? data.assignees : [userId]
+        const requestedAssignees = data.assignees && data.assignees.length > 0 ? data.assignees : []
 
         const invalidAssignees = requestedAssignees.filter(
             (assigneeId) => !assignableIds.includes(assigneeId)

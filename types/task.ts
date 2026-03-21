@@ -15,15 +15,19 @@ export enum ImportanceLevel {
 }
 export interface Task {
     id: string;
+    projectId?: string;
     code: string;
     title: string;
     status: TaskStatus;
     description?: string;
     assignees?: string[];
+    assigneeIds?: string[];
     labels?: string[];
     priority?: "low" | "medium" | "high";
     startDate?: string;
     dueDate?: string;
+    startDateValue?: string;
+    dueDateValue?: string;
     estimate?: number;
     createdAt?: string;
     updatedAt?: string;

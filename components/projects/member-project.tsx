@@ -7,7 +7,16 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { GET_METHOD } from "@/lib/req";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { GET_METHOD, PATCH_METHOD, POST_METHOD } from "@/lib/req";
 
 type ProjectMember = {
     id: string;
@@ -22,11 +31,30 @@ interface MemberDialogProps {
     onOpenChange: (open: boolean) => void;
     projectId: string | null;
     projectTitle: string | null;
+    isPublic?: boolean | null;
 }
 
-export function MemberDialog({ open, onOpenChange, projectId, projectTitle }: MemberDialogProps) {
+const INVITE_ROLES = new Set(["Admin", "Leader"]);
+const ROLE_OPTIONS = ["Admin", "Leader", "Member"];
+
+export function MemberDialog({
+    open,
+    onOpenChange,
+    projectId,
+    projectTitle,
+    isPublic,
+}: MemberDialogProps) {
     const [members, setMembers] = useState<ProjectMember[]>([]);
     const [loading, setLoading] = useState(false);
+    const [currentRole, setCurrentRole] = useState<string | null>(null);
+    const [inviteEmail, setInviteEmail] = useState("");
+    const [inviteLoading, setInviteLoading] = useState(false);
+    const [inviteError, setInviteError] = useState<string | null>(null);
+    const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+    const [shareLink, setShareLink] = useState("");
+    const [copyStatus, setCopyStatus] = useState<string | null>(null);
+    const [roleSavingId, setRoleSavingId] = useState<string | null>(null);
+    const [roleError, setRoleError] = useState<string | null>(null);
 
     useEffect(() => {
         if (open && projectId) {
@@ -35,11 +63,13 @@ export function MemberDialog({ open, onOpenChange, projectId, projectTitle }: Me
                 try {
                     const data = (await GET_METHOD(
                         `/api/projects/${projectId}/members`
-                    )) as { members?: ProjectMember[] };
+                    )) as { members?: ProjectMember[]; currentRole?: string | null };
                     setMembers(Array.isArray(data.members) ? data.members : []);
+                    setCurrentRole(data.currentRole ?? null);
                 } catch (error) {
                     console.error("Failed to load members:", error);
                     setMembers([]);
+                    setCurrentRole(null);
                 } finally {
                     setLoading(false);
                 }
@@ -49,8 +79,79 @@ export function MemberDialog({ open, onOpenChange, projectId, projectTitle }: Me
         } else {
             setMembers([]);
             setLoading(false);
+            setCurrentRole(null);
         }
     }, [open, projectId]);
+
+    useEffect(() => {
+        if (projectId && typeof window !== "undefined") {
+            setShareLink(`${window.location.origin}/project/${projectId}/join`);
+        } else {
+            setShareLink("");
+        }
+        setCopyStatus(null);
+        setInviteError(null);
+        setInviteSuccess(null);
+        setInviteEmail("");
+        setRoleError(null);
+        setRoleSavingId(null);
+    }, [projectId, open]);
+
+    const handleCopy = async () => {
+        if (!shareLink) return;
+        try {
+            await navigator.clipboard.writeText(shareLink);
+            setCopyStatus("Copied");
+        } catch {
+            setCopyStatus("Copy failed");
+        }
+        setTimeout(() => setCopyStatus(null), 2000);
+    };
+
+    const handleInvite = async () => {
+        if (!projectId) return;
+        const email = inviteEmail.trim().toLowerCase();
+        if (!email) {
+            setInviteError("Email is required");
+            return;
+        }
+        setInviteLoading(true);
+        setInviteError(null);
+        setInviteSuccess(null);
+        try {
+            await POST_METHOD(`/api/projects/${projectId}/invites`, { email });
+            setInviteSuccess("Invite sent");
+            setInviteEmail("");
+        } catch (err: unknown) {
+            const payload = (err as { response?: { data?: { message?: string } } })?.response?.data;
+            setInviteError(payload?.message ?? "Failed to send invite");
+        } finally {
+            setInviteLoading(false);
+        }
+    };
+
+    const canInvite = INVITE_ROLES.has(currentRole ?? "");
+    const canManageRoles = currentRole === "Admin";
+
+    const handleRoleChange = async (memberId: string, nextRole: string) => {
+        if (!projectId) return;
+        setRoleSavingId(memberId);
+        setRoleError(null);
+        try {
+            await PATCH_METHOD(`/api/projects/${projectId}/members`, {
+                memberId,
+                role: nextRole,
+            });
+            setMembers((prev) =>
+                prev.map((m) => (m.id === memberId ? { ...m, role: nextRole } : m))
+            );
+        } catch (err: unknown) {
+            const payload = (err as { response?: { data?: { message?: string } } })?.response?.data;
+            setRoleError(payload?.message ?? "Failed to update role");
+        } finally {
+            setRoleSavingId(null);
+        }
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,7 +163,57 @@ export function MemberDialog({ open, onOpenChange, projectId, projectTitle }: Me
                             : "Project Members"}
                     </DialogTitle>
                 </DialogHeader>
-                <div className="space-y-3">
+                <div className="space-y-5">
+                    {isPublic ? (
+                        <div className="space-y-2 rounded-lg border p-3">
+                            <div className="text-sm font-medium">Share link</div>
+                            <div className="flex gap-2">
+                                <Input readOnly value={shareLink} />
+                                <Button type="button" variant="outline" onClick={handleCopy}>
+                                    Copy
+                                </Button>
+                            </div>
+                            {copyStatus && (
+                                <div className="text-xs text-muted-foreground">{copyStatus}</div>
+                            )}
+                            <div className="text-xs text-muted-foreground">
+                                Anyone with this link can request to join.
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-2 rounded-lg border p-3">
+                            <div className="text-sm font-medium">Invite by email</div>
+                            {canInvite ? (
+                                <>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            type="email"
+                                            placeholder="email@example.com"
+                                            value={inviteEmail}
+                                            onChange={(e) => setInviteEmail(e.target.value)}
+                                        />
+                                        <Button
+                                            type="button"
+                                            onClick={handleInvite}
+                                            disabled={inviteLoading}
+                                        >
+                                            {inviteLoading ? "Sending..." : "Send"}
+                                        </Button>
+                                    </div>
+                                    {inviteError && (
+                                        <div className="text-xs text-red-500">{inviteError}</div>
+                                    )}
+                                    {inviteSuccess && (
+                                        <div className="text-xs text-green-600">{inviteSuccess}</div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="text-xs text-muted-foreground">
+                                    Only admin or leader can invite members.
+                                </div>
+                            )}
+                        </div>
+                    )}
                     {loading && (
                         <p className="text-sm text-muted-foreground">Loading...</p>
                     )}
@@ -79,11 +230,36 @@ export function MemberDialog({ open, onOpenChange, projectId, projectTitle }: Me
                                     <div className="text-sm font-medium">{member.name || member.email}</div>
                                     <div className="text-xs text-muted-foreground">{member.email}</div>
                                 </div>
-                                <span className="text-xs rounded-full border px-2 py-1 text-muted-foreground">
-                                    {member.isOwner ? "Owner" : member.role}
-                                </span>
+                                {member.isOwner || !canManageRoles ? (
+                                    <span className="text-xs rounded-full border px-2 py-1 text-muted-foreground">
+                                        {member.isOwner ? "Owner" : member.role}
+                                    </span>
+                                ) : (
+                                    <Select
+                                        value={member.role}
+                                        onValueChange={(value) =>
+                                            handleRoleChange(member.id, value)
+                                        }
+                                        disabled={roleSavingId === member.id}
+                                    >
+                                        <SelectTrigger className="h-8 w-[140px] text-xs">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {ROLE_OPTIONS.map((role) => (
+                                                <SelectItem key={role} value={role}>
+                                                    {role}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
                             </div>
                         ))}
+                    {roleSavingId && (
+                        <div className="text-xs text-muted-foreground">Saving role...</div>
+                    )}
+                    {roleError && <div className="text-xs text-red-500">{roleError}</div>}
                 </div>
             </DialogContent>
         </Dialog>

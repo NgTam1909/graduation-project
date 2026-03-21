@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 
 import CreateProject from "@/components/projects/create-project";
+import EditProject from "@/components/projects/edit-project";
 import CreateTaskForm from "@/components/tasks/create-task";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -45,14 +46,6 @@ type Project = {
     isPublic: boolean;
 };
 
-type ProjectMember = {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    isOwner: boolean;
-};
-
 export default function NavProjects() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
@@ -61,8 +54,9 @@ export default function NavProjects() {
     const [taskDialogProjectTitle, setTaskDialogProjectTitle] = useState<string | null>(null);
     const [memberDialogProjectId, setMemberDialogProjectId] = useState<string | null>(null);
     const [memberDialogProjectTitle, setMemberDialogProjectTitle] = useState<string | null>(null);
-    const [members, setMembers] = useState<ProjectMember[]>([]);
-    const [membersLoading, setMembersLoading] = useState(false);
+    const [memberDialogProjectIsPublic, setMemberDialogProjectIsPublic] = useState<boolean | null>(null);
+    const [settingsDialogProjectId, setSettingsDialogProjectId] = useState<string | null>(null);
+    const [settingsDialogProjectTitle, setSettingsDialogProjectTitle] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const mounted = useHydrated();
 
@@ -126,15 +120,23 @@ export default function NavProjects() {
     const openMembersDialog = async (project: Project) => {
         setMemberDialogProjectId(project.projectId);
         setMemberDialogProjectTitle(project.title);
-        setMembers([]);
-        setMembersLoading(true);
+        setMemberDialogProjectIsPublic(project.isPublic);
+    };
+
+    const openSettingsDialog = (project: Project) => {
+        setSettingsDialogProjectId(project.projectId);
+        setSettingsDialogProjectTitle(project.title);
+    };
+
+    const handleProjectUpdated = async () => {
+        setSettingsDialogProjectId(null);
+        setSettingsDialogProjectTitle(null);
+        setLoading(true);
         try {
-            const data = (await GET_METHOD(
-                `/api/projects/${project.projectId}/members`
-            )) as { members?: ProjectMember[] };
-            setMembers(Array.isArray(data.members) ? data.members : []);
+            const data = (await GET_METHOD("/api/projects")) as Project[];
+            setProjects(Array.isArray(data) ? data : []);
         } finally {
-            setMembersLoading(false);
+            setLoading(false);
         }
     };
 
@@ -213,7 +215,11 @@ export default function NavProjects() {
                                                 <BookUser size={14} className="mr-2" />
                                                 ThÃ nh viÃªn
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem>Settings</DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onSelect={() => openSettingsDialog(project)}
+                                            >
+                                                Settings
+                                            </DropdownMenuItem>
                                             <DropdownMenuItem
                                                 className="text-red-500"
                                                 onSelect={() => handleDelete(project.projectId)}
@@ -322,11 +328,39 @@ export default function NavProjects() {
                         if (!open) {
                             setMemberDialogProjectId(null);
                             setMemberDialogProjectTitle(null);
+                            setMemberDialogProjectIsPublic(null);
                         }
                     }}
                     projectId={memberDialogProjectId}
                     projectTitle={memberDialogProjectTitle}
+                    isPublic={memberDialogProjectIsPublic}
                 />
+
+            <Dialog
+                open={!!settingsDialogProjectId}
+                onOpenChange={(nextOpen) => {
+                    if (!nextOpen) {
+                        setSettingsDialogProjectId(null);
+                        setSettingsDialogProjectTitle(null);
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {settingsDialogProjectTitle
+                                ? `Project settings - ${settingsDialogProjectTitle}`
+                                : "Project settings"}
+                        </DialogTitle>
+                    </DialogHeader>
+                    {settingsDialogProjectId && (
+                        <EditProject
+                            projectId={settingsDialogProjectId}
+                            onSuccessAction={handleProjectUpdated}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
 
         </SidebarContent>
     );

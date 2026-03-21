@@ -59,3 +59,58 @@ export const createTaskSchema = z.object({
 })
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>
+
+export const updateTaskSchema = z
+    .object({
+        title: z
+            .string()
+            .min(1, "TiÃƒÂªu Ã„â€˜Ã¡Â»Â khÃƒÂ´ng Ã„â€˜Ã†Â°Ã¡Â»Â£c Ã„â€˜Ã¡Â»Æ’ trÃ¡Â»â€˜ng")
+            .optional(),
+        description: z.string().optional(),
+        status: z.nativeEnum(TaskStatus).optional(),
+        importance: z.nativeEnum(ImportanceLevel).optional(),
+        assignees: z.array(z.string()).optional(),
+        labels: z.array(z.string()).optional(),
+        startDate: z.string().optional(),
+        dueDate: z.string().optional(),
+        estimate: z.number().nullable().optional(),
+    })
+    .superRefine((data, ctx) => {
+        if (data.estimate !== undefined && data.estimate !== null && data.estimate < 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Estimate khÃƒÂ´ng Ã„â€˜Ã†Â°Ã¡Â»Â£c ÃƒÂ¢m",
+                path: ["estimate"],
+            })
+        }
+
+        const hasStart = data.startDate && data.startDate.trim().length > 0
+        const hasDue = data.dueDate && data.dueDate.trim().length > 0
+
+        if (hasStart && hasDue) {
+            const start = dateFromInput(data.startDate as string)
+            const due = dateFromInput(data.dueDate as string)
+            if (start > due) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "NgÃƒÂ y bÃ¡ÂºÂ¯t Ã„â€˜Ã¡ÂºÂ§u khÃƒÂ´ng Ã„â€˜Ã†Â°Ã¡Â»Â£c sau ngÃƒÂ y kÃ¡ÂºÂ¿t thÃƒÂºc",
+                    path: ["startDate"],
+                })
+            }
+        }
+
+        if (hasDue) {
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            const due = dateFromInput(data.dueDate as string)
+            if (due < today) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "NgÃƒÂ y kÃ¡ÂºÂ¿t thÃƒÂºc khÃƒÂ´ng Ã„â€˜Ã†Â°Ã¡Â»Â£c trÃ†Â°Ã¡Â»â€ºc ngÃƒÂ y hiÃ¡Â»â€¡n tÃ¡ÂºÂ¡i",
+                    path: ["dueDate"],
+                })
+            }
+        }
+    })
+
+export type UpdateTaskInput = z.infer<typeof updateTaskSchema>

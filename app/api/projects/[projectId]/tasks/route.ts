@@ -50,6 +50,7 @@ export async function GET(
         }
 
         const tasks = await Task.find({ projectId: project._id })
+            .populate("assignees", "firstName lastName email")
             .sort({ createdAt: -1 })
             .lean()
 
