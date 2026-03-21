@@ -1,8 +1,10 @@
+import mongoose from "mongoose"
 import { NextRequest, NextResponse } from "next/server"
 import { jwtVerify } from "jose"
 import { connectDB } from "@/lib/db"
 import Project, { ProjectRole } from "@/models/project.model"
 import { createProjectSchema } from "@/lib/validations/project.validation"
+import ActivityLog, { ActivityAction } from "@/models/activityLog.model"
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
 
@@ -103,19 +105,36 @@ export async function POST(req: NextRequest) {
             description,
             isPublic: visibility === "public",
             owner: {
-                userId,
+                userId: new mongoose.Types.ObjectId(userId),
                 role: ProjectRole.ADMIN,
                 joinedAt: new Date(),
             },
             members: [
                 {
-                    userId,
+                    userId: new mongoose.Types.ObjectId(userId),
                     role: ProjectRole.ADMIN,
                     joinedAt: new Date(),
                 },
             ],
         })
         await project.save()
+
+        try {
+            await ActivityLog.create({
+                userId: new mongoose.Types.ObjectId(userId),
+                projectId: project._id,
+                entityType: "Project",
+                entityId: project._id,
+                action: ActivityAction.CREATE_PROJECT,
+                newValue: {
+                    title: project.title,
+                    description: project.description ?? "",
+                    isPublic: project.isPublic,
+                },
+            })
+        } catch {
+            // ignore audit log errors
+        }
 
         return NextResponse.json(
             {

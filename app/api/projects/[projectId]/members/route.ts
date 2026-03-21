@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import mongoose from "mongoose"
 import { jwtVerify } from "jose"
 import { connectDB } from "@/lib/db"
-import Project, { ProjectRole } from "@/models/project.model"
+import Project, { ProjectRole, IProjectMember } from "@/models/project.model"
 import User from "@/models/user.model"
 import { updateMemberRoleSchema } from "@/lib/validations/member.validation"
 
@@ -49,7 +49,7 @@ export async function GET(
 
         const isMember =
             project.owner?.userId?.toString() === userId ||
-            project.members?.some((m) => m.userId?.toString() === userId)
+            project.members?.some((m: IProjectMember) => m.userId?.toString() === userId)
 
         if (!isMember) {
             return NextResponse.json({ message: "Forbidden" }, { status: 403 })
@@ -58,11 +58,11 @@ export async function GET(
         const currentRole =
             project.owner?.userId?.toString() === userId
                 ? project.owner.role
-                : project.members.find((m) => m.userId?.toString() === userId)?.role ??
+                : project.members.find((m: IProjectMember) => m.userId?.toString() === userId)?.role ??
                   null
 
         const ownerId = project.owner.userId.toString()
-        const memberIds = project.members.map((m) => m.userId.toString())
+        const memberIds = project.members.map((m: IProjectMember) => m.userId.toString())
         const allIds = Array.from(new Set([ownerId, ...memberIds]))
 
         const users = await User.find({ _id: { $in: allIds } })
@@ -87,8 +87,8 @@ export async function GET(
                 isOwner: true,
             },
             ...project.members
-                .filter((m) => m.userId.toString() !== ownerId)
-                .map((m) => ({
+                .filter((m: IProjectMember) => m.userId.toString() !== ownerId)
+                .map((m: IProjectMember) => ({
                     ...userMap.get(m.userId.toString()),
                     role: m.role,
                     isOwner: false,
@@ -142,7 +142,7 @@ export async function PATCH(
         const currentRole =
             project.owner?.userId?.toString() === userId
                 ? project.owner.role
-                : project.members.find((m) => m.userId?.toString() === userId)?.role ??
+                : project.members.find((m: IProjectMember) => m.userId?.toString() === userId)?.role ??
                   null
 
         if (currentRole !== ProjectRole.ADMIN) {
@@ -158,7 +158,7 @@ export async function PATCH(
             )
         }
 
-        const member = project.members.find((m) => m.userId?.toString() === memberId)
+        const member = project.members.find((m: IProjectMember) => m.userId?.toString() === memberId)
         if (!member) {
             return NextResponse.json({ message: "Member not found" }, { status: 404 })
         }

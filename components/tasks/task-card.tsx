@@ -62,11 +62,13 @@ export function TaskCard({ task }: Props) {
                     </CardContent>
                 </Card>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-3xl">
+            <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Task detail</DialogTitle>
                 </DialogHeader>
-                <TaskDetail task={task} />
+                <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                    <TaskDetail task={task} />
+                </div>
             </DialogContent>
         </Dialog>
     );

@@ -3,8 +3,9 @@ import mongoose from "mongoose"
 import { jwtVerify } from "jose"
 import { connectDB } from "@/lib/db"
 import Task from "@/models/task.model"
-import Project, { ProjectRole } from "@/models/project.model"
+import Project, { ProjectRole, IProjectMember } from "@/models/project.model"
 import { createTaskSchema } from "@/lib/validations/task.validation"
+import ActivityLog, { ActivityAction } from "@/models/activityLog.model"
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
 
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
         if (project.owner?.userId?.toString() === userId) {
             currentRole = project.owner.role
         } else {
-            const member = project.members.find((m) => m.userId?.toString() === userId)
+            const member = project.members.find((m: IProjectMember) => m.userId?.toString() === userId)
             currentRole = member?.role ?? null
         }
 
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
         }
 
         const ownerId = project.owner.userId.toString()
-        const memberIds = project.members.map((m) => m.userId.toString())
+        const memberIds = project.members.map((m: IProjectMember) => m.userId.toString())
         const allIds = Array.from(new Set([ownerId, ...memberIds]))
 
         let assignableIds: string[] = []
@@ -82,8 +83,8 @@ export async function POST(req: NextRequest) {
             assignableIds = [userId]
         } else if (currentRole === ProjectRole.LEADER) {
             const memberOnlyIds = project.members
-                .filter((m) => m.role === ProjectRole.MEMBER)
-                .map((m) => m.userId.toString())
+                .filter((m: IProjectMember) => m.role === ProjectRole.MEMBER)
+                .map((m: IProjectMember) => m.userId.toString())
             assignableIds = Array.from(new Set([userId, ...memberOnlyIds]))
         } else {
             assignableIds = allIds
@@ -109,6 +110,23 @@ export async function POST(req: NextRequest) {
             assignees: requestedAssignees.map((id) => new mongoose.Types.ObjectId(id)),
             overDue: false,
         })
+
+        try {
+            await ActivityLog.create({
+                userId: new mongoose.Types.ObjectId(userId),
+                projectId: project._id,
+                entityType: "Task",
+                entityId: task._id,
+                action: ActivityAction.CREATE_TASK,
+                newValue: {
+                    title: task.title,
+                    status: task.status,
+                    assignees: requestedAssignees,
+                },
+            })
+        } catch {
+            // ignore audit log errors
+        }
 
         return NextResponse.json(task)
     } catch {

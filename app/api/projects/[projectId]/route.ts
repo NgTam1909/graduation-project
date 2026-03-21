@@ -2,8 +2,9 @@ import mongoose from "mongoose"
 import { NextRequest, NextResponse } from "next/server"
 import { jwtVerify } from "jose"
 import { connectDB } from "@/lib/db"
-import Project, { ProjectRole } from "@/models/project.model"
+import Project, { ProjectRole, IProjectMember } from "@/models/project.model"
 import { updateProjectSchema } from "@/lib/validations/project.validation"
+import ActivityLog, { ActivityAction } from "@/models/activityLog.model"
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
 
@@ -32,7 +33,7 @@ function getUserRole(project: typeof Project.prototype, userId: string) {
     if (project.owner?.userId?.toString() === userId) {
         return project.owner.role
     }
-    const member = project.members.find((m) => m.userId?.toString() === userId)
+    const member = project.members.find((m: IProjectMember) => m.userId?.toString() === userId)
     return member?.role ?? null
 }
 
@@ -64,7 +65,7 @@ export async function GET(
 
         const isMember =
             project.owner?.userId?.toString() === userId ||
-            project.members?.some((m) => m.userId?.toString() === userId)
+            project.members?.some((m: IProjectMember) => m.userId?.toString() === userId)
 
         if (!isMember) {
             return NextResponse.json({ message: "Forbidden" }, { status: 403 })
@@ -120,10 +121,34 @@ export async function PATCH(
             return NextResponse.json({ message: "Forbidden" }, { status: 403 })
         }
 
+        const oldValue = {
+            title: project.title,
+            description: project.description ?? "",
+            isPublic: project.isPublic,
+        }
+
         project.title = parsed.data.title
         project.description = parsed.data.description ?? ""
         project.isPublic = parsed.data.visibility === "public"
         await project.save()
+
+        try {
+            await ActivityLog.create({
+                userId: new mongoose.Types.ObjectId(userId),
+                projectId: project._id,
+                entityType: "Project",
+                entityId: project._id,
+                action: ActivityAction.UPDATE_PROJECT,
+                oldValue,
+                newValue: {
+                    title: project.title,
+                    description: project.description ?? "",
+                    isPublic: project.isPublic,
+                },
+            })
+        } catch {
+            // ignore audit log errors
+        }
 
         return NextResponse.json({
             success: true,

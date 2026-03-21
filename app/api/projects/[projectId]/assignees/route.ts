@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import mongoose from "mongoose"
 import { jwtVerify } from "jose"
 import { connectDB } from "@/lib/db"
-import Project, { ProjectRole } from "@/models/project.model"
+import Project, { ProjectRole, IProjectMember } from "@/models/project.model"
 import User from "@/models/user.model"
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
@@ -50,7 +50,7 @@ export async function GET(
         if (project.owner?.userId?.toString() === userId) {
             currentRole = project.owner.role
         } else {
-            const member = project.members.find((m) => m.userId?.toString() === userId)
+            const member = project.members.find((m: IProjectMember) => m.userId?.toString() === userId)
             currentRole = member?.role ?? null
         }
 
@@ -59,7 +59,7 @@ export async function GET(
         }
 
         const ownerId = project.owner.userId.toString()
-        const memberIds = project.members.map((m) => m.userId.toString())
+        const memberIds = project.members.map((m: IProjectMember) => m.userId.toString())
         const allIds = Array.from(new Set([ownerId, ...memberIds]))
 
         let assignableIds: string[] = []
@@ -67,8 +67,8 @@ export async function GET(
             assignableIds = [userId]
         } else if (currentRole === ProjectRole.LEADER) {
             const memberOnlyIds = project.members
-                .filter((m) => m.role === ProjectRole.MEMBER)
-                .map((m) => m.userId.toString())
+                .filter((m: IProjectMember) => m.role === ProjectRole.MEMBER)
+                .map((m: IProjectMember) => m.userId.toString())
             assignableIds = Array.from(new Set([userId, ...memberOnlyIds]))
         } else {
             assignableIds = allIds

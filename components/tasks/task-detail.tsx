@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { Task } from "@/types/task"
 import { GET_METHOD, PATCH_METHOD } from "@/lib/req"
 import { Input } from "@/components/ui/input"
+import { ActivityLog } from "@/types/activity-log"
 
 type TaskDetailProps = {
     task: Task
@@ -38,9 +39,99 @@ export function TaskDetail({ task }: TaskDetailProps) {
     const [isEditingEstimate, setIsEditingEstimate] = useState(false)
     const [savingField, setSavingField] = useState<string | null>(null)
     const [saveError, setSaveError] = useState<string | null>(null)
+    const [auditLogs, setAuditLogs] = useState<ActivityLog[]>([])
+    const [auditLoading, setAuditLoading] = useState(false)
+    const [auditError, setAuditError] = useState<string | null>(null)
     const dropdownRef = useRef<HTMLDivElement>(null)
     const startDateRef = useRef<HTMLInputElement>(null)
     const dueDateRef = useRef<HTMLInputElement>(null)
+
+    const actionLabels: Record<string, string> = {
+        CREATE_PROJECT: "Tạo project",
+        UPDATE_PROJECT: "Cập nhật project",
+        DELETE_PROJECT: "Xóa project",
+        INVITE_MEMBER: "Mời thành viên",
+        CHANGE_ROLE: "Đổi vai trò",
+        CREATE_TASK: "Tạo task",
+        UPDATE_TASK: "Cập nhật task",
+        UPDATE_TASK_STATUS: "Đổi trạng thái task",
+    }
+
+    const fieldLabels: Record<string, string> = {
+        title: "Tiêu đề",
+        description: "Mô tả",
+        status: "Trạng thái",
+        importance: "Mức độ",
+        labels: "Nhãn",
+        estimate: "Estimate",
+        assignees: "Người thực hiện",
+        startDate: "Ngày bắt đầu",
+        dueDate: "Ngày kết thúc",
+        projectId: "Project",
+    }
+
+    const formatLogTime = (value: string) => {
+        const date = new Date(value)
+        if (Number.isNaN(date.getTime())) return value
+        return date.toLocaleString("vi-VN")
+    }
+
+    const formatFieldValue = (key: string, value: unknown) => {
+        if (value === null || value === undefined || value === "") return "trống"
+        if (Array.isArray(value)) {
+            if (key === "assignees") {
+                const names = value.map((assigneeId) => {
+                    const user = availableUsers.find((u) => u.id === assigneeId)
+                    return user?.name ?? String(assigneeId)
+                })
+                return names.join(", ") || "trống"
+            }
+            return value.map((item) => String(item)).join(", ")
+        }
+        if (typeof value === "string") {
+            if (key === "startDate" || key === "dueDate") {
+                const date = new Date(value)
+                if (!Number.isNaN(date.getTime())) {
+                    return date.toLocaleDateString("vi-VN")
+                }
+            }
+            return value
+        }
+        if (typeof value === "number" || typeof value === "boolean") {
+            return String(value)
+        }
+        return JSON.stringify(value)
+    }
+
+    const getLogChanges = (log: ActivityLog) => {
+        const oldValue = (log.oldValue ?? {}) as Record<string, unknown>
+        const newValue = (log.newValue ?? {}) as Record<string, unknown>
+        const keys = Array.from(new Set([...Object.keys(oldValue), ...Object.keys(newValue)]))
+        return keys
+            .filter((key) => JSON.stringify(oldValue[key]) !== JSON.stringify(newValue[key]))
+            .map((key) => ({
+                key,
+                label: fieldLabels[key] ?? key,
+                from: formatFieldValue(key, oldValue[key]),
+                to: formatFieldValue(key, newValue[key]),
+            }))
+    }
+
+    const loadAuditLogs = async () => {
+        if (!task.id) return
+        try {
+            setAuditLoading(true)
+            setAuditError(null)
+            const data = (await GET_METHOD(`/api/activity/task/${task.id}`)) as {
+                logs?: ActivityLog[]
+            }
+            setAuditLogs(Array.isArray(data?.logs) ? data.logs : [])
+        } catch {
+            setAuditError("Không thể tải log audit")
+        } finally {
+            setAuditLoading(false)
+        }
+    }
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -61,6 +152,18 @@ export function TaskDetail({ task }: TaskDetailProps) {
         setSaveError(null)
         setSavingField(null)
     }, [task])
+
+    useEffect(() => {
+        loadAuditLogs()
+    }, [task.id])
+
+    useEffect(() => {
+        const handleTaskUpdated = () => {
+            loadAuditLogs()
+        }
+        window.addEventListener("task:updated", handleTaskUpdated)
+        return () => window.removeEventListener("task:updated", handleTaskUpdated)
+    }, [task.id])
 
     useEffect(() => {
         if (!task.projectId) return
@@ -388,14 +491,56 @@ export function TaskDetail({ task }: TaskDetailProps) {
             <Card>
                 <CardHeader>
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <MessageSquare size={14} />
-                        Comments
+                        <Input
+                            placeholder="Comment"
+                        />
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                        Chá»©c nÄƒng bÃ¬nh luáº­n sáº½ Ä‘Æ°á»£c phÃ¡t triá»ƒn sau.
-                    </p>
+                <CardContent className="space-y-3">
+                    {auditLoading && (
+                        <p className="text-sm text-muted-foreground">
+                            Đang tải log audit...
+                        </p>
+                    )}
+                    {!auditLoading && auditError && (
+                        <p className="text-sm text-red-500">{auditError}</p>
+                    )}
+                    {!auditLoading && !auditError && auditLogs.length === 0 && (
+                        <p className="text-sm text-muted-foreground">
+                            Chưa có log audit.
+                        </p>
+                    )}
+                    {!auditLoading && !auditError && auditLogs.length > 0 && (
+                        <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                            {auditLogs.map((log) => {
+                                const changes = getLogChanges(log)
+                                return (
+                                    <div key={log.id} className="rounded-md border p-2">
+                                        <div className="text-sm font-medium">
+                                            {actionLabels[log.action] ?? log.action}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {(log.user?.name ?? "Hệ thống") +
+                                                " • " +
+                                                formatLogTime(log.createdAt)}
+                                        </div>
+                                        {changes.length > 0 && (
+                                            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                                                {changes.map((change) => (
+                                                    <div key={`${log.id}-${change.key}`}>
+                                                        <span className="font-medium text-foreground/80">
+                                                            {change.label}:
+                                                        </span>{" "}
+                                                        {change.from} → {change.to}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

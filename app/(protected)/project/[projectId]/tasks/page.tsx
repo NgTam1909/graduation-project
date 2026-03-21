@@ -43,7 +43,7 @@ function toTask(item: ApiTask, projectId?: string): Task {
     const assignees = Array.isArray(item.assignees)
         ? item.assignees.map((a) => {
               if (typeof a === "string") return a
-              const fullName = `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim()
+              const fullName = `${a.lastName ?? ""} ${a.firstName ?? ""}`.trim()
               return fullName || a.name || a.email || "User"
           })
         : undefined
