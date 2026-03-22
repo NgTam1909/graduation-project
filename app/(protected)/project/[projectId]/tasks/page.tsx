@@ -222,10 +222,10 @@ export default function ProjectTaskListPage() {
                     </p>
                 )}
                 {loading && (
-                    <p className="text-sm text-muted-foreground">Äang táº£i tasks...</p>
+                    <p className="text-sm text-muted-foreground">Đang tải tasks...</p>
                 )}
                 {!loading && tasks.length === 0 && (
-                    <p className="text-sm text-muted-foreground">ChÆ°a cÃ³ task nÃ o.</p>
+                    <p className="text-sm text-muted-foreground">Chưa có task nào.</p>
                 )}
             </section>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from "react"
-import {Search, Bell, HelpCircle, User, ArrowRight} from 'lucide-react';
+import { Search, Bell, HelpCircle, User, ArrowRight } from 'lucide-react';
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ export default function NavMenu({
     onToggleSidebarAction,
     className,
 }: NavMenuProps) {
+    const [mounted, setMounted] = useState(false)
     const pathname = usePathname()
     const projectId = useMemo(() => {
         if (!pathname) return null
@@ -40,26 +41,26 @@ export default function NavMenu({
     const [logsError, setLogsError] = useState<string | null>(null)
 
     const actionLabels: Record<string, string> = {
-        CREATE_PROJECT: "Tạo dự án",
-        UPDATE_PROJECT: "Cập nhật dự án",
-        DELETE_PROJECT: "Xóa dự án",
-        INVITE_MEMBER: "Mời thành viên",
-        CHANGE_ROLE: "Thay đổi vai trò",
-        CREATE_TASK: "Tạo công việc",
-        UPDATE_TASK: "Cập nhật công việc",
-        UPDATE_TASK_STATUS: "Cập nhật trạng thái công việc",
+        CREATE_PROJECT: "Táº¡o dá»± Ã¡n",
+        UPDATE_PROJECT: "Cáº­p nháº­t dá»± Ã¡n",
+        DELETE_PROJECT: "XÃ³a dá»± Ã¡n",
+        INVITE_MEMBER: "Má»i thÃ nh viÃªn",
+        CHANGE_ROLE: "Thay Ä‘á»•i vai trÃ²",
+        CREATE_TASK: "Táº¡o cÃ´ng viá»‡c",
+        UPDATE_TASK: "Cáº­p nháº­t cÃ´ng viá»‡c",
+        UPDATE_TASK_STATUS: "Cáº­p nháº­t tráº¡ng thÃ¡i cÃ´ng viá»‡c",
     }
 
     const fieldLabels: Record<string, string> = {
-        title: "Tiêu đề",
-        description: "Mô tả",
-        status: "Trạng thái",
-        importance: "Độ ưu tiên",
-        labels: "Nhãn",
-        estimate: "Giới hạn",
-        assignees: "Người thực hiện",
-        startDate: "Ngày bắt đầu",
-        dueDate: "Ngày kết thúc",
+        title: "TiÃªu Ä‘á»",
+        description: "MÃ´ táº£",
+        status: "Tráº¡ng thÃ¡i",
+        importance: "Äá»™ Æ°u tiÃªn",
+        labels: "NhÃ£n",
+        estimate: "Giá»›i háº¡n",
+        assignees: "NgÆ°á»i thá»±c hiá»‡n",
+        startDate: "NgÃ y báº¯t Ä‘áº§u",
+        dueDate: "NgÃ y káº¿t thÃºc",
         projectId: "Project",
     }
 
@@ -70,7 +71,7 @@ export default function NavMenu({
     }
 
     const formatFieldValue = (key: string, value: unknown) => {
-        if (value === null || value === undefined || value === "") return "trống"
+        if (value === null || value === undefined || value === "") return "trá»‘ng"
         if (Array.isArray(value)) {
             return value.map((item) => String(item)).join(", ")
         }
@@ -116,7 +117,7 @@ export default function NavMenu({
             }
             setProjectLogs(Array.isArray(data?.logs) ? data.logs : [])
         } catch {
-            setLogsError("Không thể tải thông báo")
+            setLogsError("KhÃ´ng thá»ƒ táº£i thÃ´ng bÃ¡o")
         } finally {
             setLogsLoading(false)
         }
@@ -135,6 +136,10 @@ export default function NavMenu({
 
         window.location.href = "/login"
     }
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     useEffect(() => {
         loadProjectLogs()
@@ -159,15 +164,19 @@ export default function NavMenu({
                 {/* LEFT */}
                 <div className="flex items-center gap-3">
 
-                    {/* nút toggle sidebar */}
-                    {onToggleSidebarAction && (
+                    {/* logo */}
+                    {onToggleSidebarAction ? (
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={onToggleSidebarAction}
-                            aria-label="Mở sidebar"
+                            aria-label="Má»Ÿ sidebar"
                         >
-                            <Image src="/logo.svg" alt="Logo" width={20} height={20} />
+                            <Image src="/logo.svg" alt="Logo" width={40} height={40} />
+                        </Button>
+                    ) : (
+                        <Button variant="ghost" size="icon" aria-label="Logo">
+                            <Image src="/logo.svg" alt="Logo" width={100} height={100} />
                         </Button>
                     )}
 
@@ -190,94 +199,106 @@ export default function NavMenu({
 
                     <Separator orientation="vertical" className="h-6" />
 
-                    <DropdownMenu onOpenChange={handleNotificationOpenChange}>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="ThÃ´ng bÃ¡o">
-                                <Bell size={20} />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-96">
-                            <DropdownMenuLabel>Thông báo</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {!projectId && (
-                                <div className="px-2 py-2 text-xs text-muted-foreground">
-                                    Chọn project để xem thông báo.
-                                </div>
-                            )}
-                            {projectId && logsLoading && (
-                                <div className="px-2 py-2 text-xs text-muted-foreground">
-                                    Đang tải thông báo...
-                                </div>
-                            )}
-                            {projectId && !logsLoading && logsError && (
-                                <div className="px-2 py-2 text-xs text-red-500">
-                                    {logsError}
-                                </div>
-                            )}
-                            {projectId && !logsLoading && !logsError && projectLogs.length === 0 && (
-                                <div className="px-2 py-2 text-xs text-muted-foreground">
-                                    Chưa có thông báo.
-                                </div>
-                            )}
-                            {projectId && !logsLoading && !logsError && projectLogs.length > 0 && (
-                                <div className="max-h-80 overflow-auto">
-                                    {projectLogs.map((log) => {
-                                        const changes = getLogChanges(log)
-                                        return (
-                                            <div
-                                                key={log.id}
-                                                className="rounded-md px-2 py-2 text-sm hover:bg-accent"
-                                            >
-                                                <div className="font-medium">
-                                                    {actionLabels[log.action] ?? log.action}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    {(log.user?.name ?? "Hệ thống") +
-                                                        " - " +
-                                                        formatLogTime(log.createdAt)}
-                                                </div>
-                                                {changes.length > 0 && (
-                                                    <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                                                        {changes.map((change) => (
-                                                            <div key={`${log.id}-${change.key}`}>
-                                                                <span className="font-medium text-foreground/80">
-                                                                    {change.label}:
-                                                                </span>{" "}
-                                                                {change.from} <ArrowRight size={12} className="text-muted-foreground" /> {change.to}
-                                                            </div>
-                                                        ))}
+                    {mounted ? (
+                        <DropdownMenu onOpenChange={handleNotificationOpenChange}>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" aria-label="ThÃƒÂ´ng bÃƒÂ¡o">
+                                    <Bell size={20} />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-96">
+                                <DropdownMenuLabel>ThÃ´ng bÃ¡o</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {!projectId && (
+                                    <div className="px-2 py-2 text-xs text-muted-foreground">
+                                        Chá»n project Ä‘á»ƒ xem thÃ´ng bÃ¡o.
+                                    </div>
+                                )}
+                                {projectId && logsLoading && (
+                                    <div className="px-2 py-2 text-xs text-muted-foreground">
+                                        Äang táº£i thÃ´ng bÃ¡o...
+                                    </div>
+                                )}
+                                {projectId && !logsLoading && logsError && (
+                                    <div className="px-2 py-2 text-xs text-red-500">
+                                        {logsError}
+                                    </div>
+                                )}
+                                {projectId && !logsLoading && !logsError && projectLogs.length === 0 && (
+                                    <div className="px-2 py-2 text-xs text-muted-foreground">
+                                        ChÆ°a cÃ³ thÃ´ng bÃ¡o.
+                                    </div>
+                                )}
+                                {projectId && !logsLoading && !logsError && projectLogs.length > 0 && (
+                                    <div className="max-h-80 overflow-auto">
+                                        {projectLogs.map((log) => {
+                                            const changes = getLogChanges(log)
+                                            return (
+                                                <div
+                                                    key={log.id}
+                                                    className="rounded-md px-2 py-2 text-sm hover:bg-accent"
+                                                >
+                                                    <div className="font-medium">
+                                                        {actionLabels[log.action] ?? log.action}
                                                     </div>
-                                                )}
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {(log.user?.name ?? "Há»‡ thá»‘ng") +
+                                                            " - " +
+                                                            formatLogTime(log.createdAt)}
+                                                    </div>
+                                                    {changes.length > 0 && (
+                                                        <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                                                            {changes.map((change) => (
+                                                                <div key={`${log.id}-${change.key}`}>
+                                                                    <span className="font-medium text-foreground/80">
+                                                                        {change.label}:
+                                                                    </span>{" "}
+                                                                    {change.from} <ArrowRight size={12} className="text-muted-foreground" /> {change.to}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    ) : (
+                        <Button variant="ghost" size="icon" aria-label="ThÃƒÂ´ng bÃƒÂ¡o">
+                            <Bell size={20} />
+                        </Button>
+                    )}
 
                     <Separator orientation="vertical" className="h-6" />
 
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="User menu">
-                                <User size={20} />
-                            </Button>
-                        </DropdownMenuTrigger>
+                    {mounted ? (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" aria-label="User menu">
+                                    <User size={20} />
+                                </Button>
+                            </DropdownMenuTrigger>
 
-                        <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem>
-                                Quản lý tài khoản
-                            </DropdownMenuItem>
+                            <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem>
+                                    Quáº£n lÃ½ tÃ i khoáº£n
+                                </DropdownMenuItem>
 
-                            <DropdownMenuItem
-                                className="text-red-500"
-                                onClick={handleLogout}
-                            >
-                                Đăng xuất
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                <DropdownMenuItem
+                                    className="text-red-500"
+                                    onClick={handleLogout}
+                                >
+                                    ÄÄƒng xuáº¥t
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    ) : (
+                        <Button variant="ghost" size="icon" aria-label="User menu">
+                            <User size={20} />
+                        </Button>
+                    )}
 
                 </div>
 

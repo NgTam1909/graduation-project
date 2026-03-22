@@ -250,13 +250,12 @@ export default function NavProjects() {
                                         </button>
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => openMembersDialog(project)}
+                                    <Link
+                                        href={`/project/${project.projectId}/stats`}
                                         className="flex w-full items-center gap-2 p-2 rounded-lg hover:bg-muted transition text-sm text-left"
                                     >
                                         Thống kê
-                                    </button>
+                                    </Link>
                                 </CollapsibleContent>
                             </Collapsible>
                         ))}
