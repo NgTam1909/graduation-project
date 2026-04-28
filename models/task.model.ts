@@ -7,11 +7,18 @@ export enum TaskStatus {
     DONE = "done",
     CANCELLED = "cancelled"
 }
-export enum ImportanceLevel {
+export enum PriorityLevel {
     NONE = "none",
     LOW = "low",
     MEDIUM = "medium",
     HIGH = "high",
+}
+
+export interface ITaskComment {
+    _id?: mongoose.Types.ObjectId;
+    userId: mongoose.Types.ObjectId;
+    content: string;
+    createdAt: Date;
 }
 
 
@@ -19,7 +26,7 @@ export interface ITask extends Document {
     title: string;
     description?: string;
     status: TaskStatus;
-    importance: ImportanceLevel;
+    priority: PriorityLevel;
     projectId: mongoose.Types.ObjectId;
     creatorId: mongoose.Types.ObjectId;
     assignees?: mongoose.Types.ObjectId[];
@@ -29,6 +36,7 @@ export interface ITask extends Document {
     estimate?: number;
     parentId?: mongoose.Types.ObjectId;
     comment?: string[];
+    comments?: ITaskComment[];
     resource?: mongoose.Types.ObjectId[];
     overDue: boolean;
     createdAt: Date;
@@ -57,10 +65,10 @@ const TaskSchema = new Schema<ITask>(
             default: TaskStatus.BACKLOG,
         },
 
-        importance: {
+        priority: {
             type: String,
-            enum: Object.values(ImportanceLevel),
-            default: ImportanceLevel.NONE,
+            enum: Object.values(PriorityLevel),
+            default: PriorityLevel.NONE,
         },
         projectId: {
             type: Schema.Types.ObjectId,
@@ -106,6 +114,25 @@ const TaskSchema = new Schema<ITask>(
         comment: {
             type: String,
         },
+
+        comments: [
+            {
+                userId: {
+                    type: Schema.Types.ObjectId,
+                    ref: "User",
+                    required: true,
+                },
+                content: {
+                    type: String,
+                    required: true,
+                    trim: true,
+                },
+                createdAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+            },
+        ],
 
         resource: [
             {

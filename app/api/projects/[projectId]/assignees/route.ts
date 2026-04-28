@@ -4,7 +4,7 @@ import { jwtVerify } from "jose"
 import { connectDB } from "@/lib/db"
 import Project, { ProjectRole, IProjectMember } from "@/models/project.model"
 import User from "@/models/user.model"
-
+import {LeanUser} from "@/types/task"
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
 
 async function getUserIdFromRequest(req: NextRequest) {
@@ -32,7 +32,7 @@ export async function GET(
 
         const { projectId } = await params
         if (!projectId) {
-            return NextResponse.json({ message: "KhÃ´ng thá»¥c projectId" }, { status: 400 })
+            return NextResponse.json({ message: "Không thấy projectId" }, { status: 400 })
         }
 
         await connectDB()
@@ -43,7 +43,7 @@ export async function GET(
         }
 
         if (!project) {
-            return NextResponse.json({ message: "KhÃ´ng tÃ¬m tháº¥y dá»± Ã¡n" }, { status: 404 })
+            return NextResponse.json({ message: "Không tìm thấy dự án" }, { status: 404 })
         }
 
         let currentRole: ProjectRole | null = null
@@ -74,17 +74,19 @@ export async function GET(
             assignableIds = allIds
         }
 
-        const users = await User.find({ _id: { $in: assignableIds } })
-            .select("firstName lastName email")
-            .lean()
+        const users = (await User.find({ _id: { $in: assignableIds } })
+            .select("firstName lastName email position skills")
+            .lean()) as LeanUser[]
 
         const userMap = new Map(
             users.map((u) => [
                 u._id.toString(),
                 {
                     id: u._id.toString(),
-                    name: `${u.firstName} ${u.lastName}`.trim(),
+                    name: `${u.lastName} ${u.firstName}`.trim(),
                     email: u.email,
+                    position: u.position ?? null,
+                    skills: Array.isArray(u.skills) ? u.skills : [],
                 },
             ])
         )
@@ -100,7 +102,7 @@ export async function GET(
         })
     } catch {
         return NextResponse.json(
-            { message: "KhÃ´ng thá»ƒ láº¥y danh sÃ¡ch ngÆ°á»i" },
+            { message: "👉 Không thể lấy danh sách thành viên" },
             { status: 500 }
         )
     }

@@ -5,12 +5,8 @@ import Link from "next/link"
 import { KanbanColumn } from "@/components/tasks/task-list"
 import { Task, TaskStatus } from "@/types/task"
 import { GET_METHOD } from "@/lib/req"
+import { Project } from "@/types/project"
 
-type Project = {
-    _id: string
-    title: string
-    projectId: string
-}
 
 const columns: Array<{ title: string; status: TaskStatus; tasks: Task[] }> = [
     { title: "Backlog", status: TaskStatus.BACKLOG, tasks: [] },

@@ -3,6 +3,7 @@ import { jwtVerify } from "jose"
 
 import { connectDB } from "@/lib/db"
 import User from "@/models/user.model"
+import {MyTasks} from "@/components/tasks/my-task";
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
 
@@ -44,14 +45,14 @@ export default async function DashboardPage() {
     const username = (await getCurrentUsername()) ?? "bạn"
     const greeting =
         hour < 4
-            ? 'Giờ này sao bạn lại ở đây? '
+            ? 'Hãy chú ý sức khỏe'
             : hour < 12
                 ? 'Chào buổi sáng'
                 : hour < 18
                     ? 'Chào buổi chiều'
                     : hour < 23
                         ? 'Chào buổi tối'
-                        : 'Muộn rồi đó!'
+                        : 'Hãy chú ý sức khỏe'
 
     const today = now.toLocaleDateString('vi-VN', {
         weekday: 'long',
@@ -63,36 +64,6 @@ export default async function DashboardPage() {
         hour: '2-digit',
         minute: '2-digit'
     })
-
-    const tasks = [
-        {
-            id: 'TSK-001',
-            name: 'Thiết kế giao diện',
-            updatedAt: '10:45',
-            status: 'Doing',
-            assignee: 'Tâm',
-        },
-        {
-            id: 'TSK-002',
-            name: 'Xây dựng API',
-            updatedAt: '09:20',
-            status: 'Todo',
-            assignee: 'An',
-        },
-    ]
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'Doing':
-                return 'bg-blue-100 text-blue-600'
-            case 'Todo':
-                return 'bg-yellow-100 text-yellow-600'
-            case 'Done':
-                return 'bg-green-100 text-green-600'
-            default:
-                return 'bg-muted text-muted-foreground'
-        }
-    }
 
     return (
 
@@ -111,57 +82,10 @@ export default async function DashboardPage() {
 
             {/* Task Section */}
             <div>
-
-                <h2 className="text-lg sm:text-xl font-semibold mb-6">
-                    Tổng quan dự án
+                <h2 className="text-lg sm:text-xl font-semibold ">
+                    Danh sách công việc
                 </h2>
-
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-
-                    {tasks.map((task) => (
-
-                        <div
-                            key={task.id}
-                            className="bg-background border rounded-xl p-5 space-y-4 hover:shadow-md transition"
-                        >
-
-                            {/* Top */}
-                            <div className="flex justify-between items-start">
-
-                                <div>
-                                    <p className="text-xs text-muted-foreground">
-                                        {task.id}
-                                    </p>
-
-                                    <h3 className="font-semibold text-base">
-                                        {task.name}
-                                    </h3>
-                                </div>
-
-                                <span
-                                    className={`px-2.5 py-1 text-xs rounded-full font-medium ${getStatusColor(
-                                        task.status
-                                    )}`}
-                                >
-                                    {task.status}
-                                </span>
-
-                            </div>
-
-                            {/* Info */}
-                            <div className="text-xs text-muted-foreground">
-                                Cập nhật: {task.updatedAt}
-                            </div>
-
-                            <div className="text-sm">
-                                Phụ trách: {task.assignee}
-                            </div>
-
-                        </div>
-
-                    ))}
-
-                </div>
+                    <MyTasks />
 
             </div>
 

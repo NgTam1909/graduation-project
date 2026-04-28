@@ -1,12 +1,13 @@
+
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useParams } from "next/navigation"
 import { KanbanColumn } from "@/components/tasks/task-list"
 import { Task, TaskStatus } from "@/types/task"
-import { GET_METHOD, PATCH_METHOD } from "@/lib/req"
-import { ApiTask, ApiResponse, ProjectInfo } from "@/types/project";
-
+import {  ProjectInfo } from "@/types/project"
+import { getProjectTasks, updateTask } from "@/services/task.service"
+import { toTaskDetail } from "@/lib/mappers/task"
 const statusColumns: Array<{ title: string; status: TaskStatus }> = [
     { title: "Backlog", status: TaskStatus.BACKLOG },
     { title: "Todo", status: TaskStatus.TODO },
@@ -14,69 +15,6 @@ const statusColumns: Array<{ title: string; status: TaskStatus }> = [
     { title: "Done", status: TaskStatus.DONE },
     { title: "Cancelled", status: TaskStatus.CANCELLED },
 ]
-
-function toTask(item: ApiTask, projectId?: string): Task {
-    const code = `TSK-${item._id.slice(-6).toUpperCase()}`
-    const priority =
-        item.importance === "low" || item.importance === "medium" || item.importance === "high"
-            ? item.importance
-            : undefined
-
-    const startDate = item.startDate
-        ? new Date(item.startDate).toLocaleDateString("vi-VN")
-        : undefined
-    const dueDate = item.dueDate
-        ? new Date(item.dueDate).toLocaleDateString("vi-VN")
-        : undefined
-    const toLocalDateValue = (value?: string | null) => {
-        if (!value) return undefined
-        const date = new Date(value)
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, "0")
-        const day = String(date.getDate()).padStart(2, "0")
-        return `${year}-${month}-${day}`
-    }
-
-    const startDateValue = toLocalDateValue(item.startDate)
-    const dueDateValue = toLocalDateValue(item.dueDate)
-
-    const assignees = Array.isArray(item.assignees)
-        ? item.assignees.map((a) => {
-              if (typeof a === "string") return a
-              const fullName = `${a.lastName ?? ""} ${a.firstName ?? ""}`.trim()
-              return fullName || a.name || a.email || "User"
-          })
-        : undefined
-    const assigneeIds = Array.isArray(item.assignees)
-        ? item.assignees
-              .map((a) => (typeof a === "string" ? a : a._id))
-              .filter((id): id is string => !!id)
-        : undefined
-
-    return {
-        id: item._id,
-        projectId,
-        code,
-        title: item.title,
-        status: item.status,
-        priority,
-        description: item.description ?? undefined,
-        assignees,
-        assigneeIds,
-        labels: item.labels,
-        startDate,
-        dueDate,
-        startDateValue,
-        dueDateValue,
-        estimate: item.estimate ?? undefined,
-        createdAt: item.createdAt
-            ? new Date(item.createdAt).toLocaleString("vi-VN")
-            : undefined,
-        updatedAt: item.updatedAt
-            ? new Date(item.updatedAt).toLocaleString("vi-VN")
-            : undefined,
-    }
-}
 
 export default function ProjectTaskListPage() {
     const params = useParams<{ projectId: string }>()
@@ -86,9 +24,8 @@ export default function ProjectTaskListPage() {
     const [tasks, setTasks] = useState<Task[]>([])
     const [loading, setLoading] = useState(true)
     const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null)
-    const boardRef = useRef<HTMLDivElement | null>(null)
-
     const [reloadKey, setReloadKey] = useState(0)
+    const boardRef = useRef<HTMLDivElement | null>(null)
 
     useEffect(() => {
         const handler = () => setReloadKey((key) => key + 1)
@@ -106,11 +43,11 @@ export default function ProjectTaskListPage() {
         const load = async () => {
             if (!projectId) return
             try {
-                const data = (await GET_METHOD(`/api/projects/${projectId}/tasks`)) as ApiResponse
+                const data = await getProjectTasks(projectId)
                 if (!active) return
                 setProject(data?.project ?? null)
                 const mapped = Array.isArray(data?.tasks)
-                    ? data.tasks.map((task) => toTask(task, projectId))
+                    ? data.tasks.map((task) => toTaskDetail(task, projectId))
                     : []
                 setTasks(mapped)
             } catch {
@@ -123,19 +60,21 @@ export default function ProjectTaskListPage() {
             }
         }
 
-        load()
+        void load()
 
         return () => {
             active = false
         }
     }, [projectId, reloadKey])
 
-    const columns = useMemo(() => {
-        return statusColumns.map((column) => ({
-            ...column,
-            tasks: tasks.filter((task) => task.status === column.status),
-        }))
-    }, [tasks])
+    const columns = useMemo(
+        () =>
+            statusColumns.map((column) => ({
+                ...column,
+                tasks: tasks.filter((task) => task.status === column.status),
+            })),
+        [tasks]
+    )
 
     const handleDragStart = (task: Task, event: React.DragEvent<HTMLDivElement>) => {
         event.dataTransfer.setData("text/task-id", task.id)
@@ -186,44 +125,35 @@ export default function ProjectTaskListPage() {
             status === TaskStatus.TODO &&
             (!task.assigneeIds || task.assigneeIds.length === 0)
         ) {
-            window.alert("Cáº§n gáº¯n assignee trÆ°á»›c khi chuyá»ƒn sang Todo.")
+            window.alert("Cần gán assignee trước khi chuyển sang Todo.")
             return
         }
 
         const previousStatus = task.status
-        setTasks((prev) =>
-            prev.map((item) =>
-                item.id === taskId ? { ...item, status } : item
-            )
-        )
+        setTasks((prev) => prev.map((item) => (item.id === taskId ? { ...item, status } : item)))
 
         try {
-            await PATCH_METHOD(`/api/task/${taskId}`, { status })
+            await updateTask(taskId, { status })
             window.dispatchEvent(new Event("task:updated"))
-        } catch {
+        } catch (err: any) {
             setTasks((prev) =>
-                prev.map((item) =>
-                    item.id === taskId ? { ...item, status: previousStatus } : item
-                )
+                prev.map((item) => (item.id === taskId ? { ...item, status: previousStatus } : item))
             )
-            window.alert("Cáº­p nháº­t tráº¡ng thái tháº¥t báº¡i. Vui lòng thá»­ láº¡i.")
+            const msg =
+                err?.response?.data?.message ||
+                "Cập nhật trạng thái thất bại. Vui lòng thử lại."
+            window.alert(msg)
         }
     }
 
     return (
         <div className="space-y-6">
             <section className="space-y-2">
-                <h1 className="text-xl font-semibold">
-                    {project?.title ?? "Task list"}
-                </h1>
+                <h1 className="text-xl font-semibold">{project?.title ?? "Task list"}</h1>
                 {project?.projectId && (
-                    <p className="text-sm text-muted-foreground">
-                        {project.projectId}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{project.projectId}</p>
                 )}
-                {loading && (
-                    <p className="text-sm text-muted-foreground">Đang tải tasks...</p>
-                )}
+                {loading && <p className="text-sm text-muted-foreground">Đang tải tasks...</p>}
                 {!loading && tasks.length === 0 && (
                     <p className="text-sm text-muted-foreground">Chưa có task nào.</p>
                 )}

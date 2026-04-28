@@ -12,21 +12,21 @@ export async function POST(req: NextRequest) {
 
         if (!token) {
             return NextResponse.json(
-                { message: "Token khÃ´ng há»£p lá»‡" },
+                { message: "Token không hợp lệ" },
                 { status: 400 }
             )
         }
 
         if (!password || password.length < 6) {
             return NextResponse.json(
-                { message: "Máº­t kháº©u pháº£i cÃ³ Ã­t nháº¥t 6 kÃ½ tá»±" },
+                { message: "Mật khẩu phải có ít nhất 6 ký tự" },
                 { status: 400 }
             )
         }
 
         if (password !== confirmPassword) {
             return NextResponse.json(
-                { message: "Máº­t kháº©u xÃ¡c nháº­n khÃ´ng khá»›p" },
+                { message: "Mật khẩu xác nhận không khớp" },
                 { status: 400 }
             )
         }
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
         if (!user) {
             return NextResponse.json(
-                { message: "Token háº¿t háº¡n hoáº·c khÃ´ng há»£p lá»‡" },
+                { message: "Token hết hạn hoặc không hợp lệ" },
                 { status: 400 }
             )
         }
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true })
     } catch {
         return NextResponse.json(
-            { message: "KhÃ´ng thá»ƒ Ä‘áº·t láº¡i máº­t kháº©u" },
+            { message: "Không thể đặt lại mật khẩu" },
             { status: 500 }
         )
     }

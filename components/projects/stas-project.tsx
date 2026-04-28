@@ -1,19 +1,25 @@
 'use client'
 
-import { useEffect, useMemo, useState } from "react"
-import { buildAdvancedStats } from "@/lib/stast"
+import { type ReactNode, useEffect, useState } from "react"
 import ClickablePie from "@/components/chart/pie-chart"
-import TopUserChart from "@/components/chart/bar-chart"
+import TaskMonthlyChart from "@/components/chart/combo-chart"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { GET_METHOD } from "@/lib/req"
-import { ApiResponse, ApiTask } from "@/types/project"
-import { Task, TaskStatus } from "@/types/task"
+import { useStats } from "@/hooks/useStats"
+import { ApiResponse } from "@/types/project"
+import { Task } from "@/types/task"
+import { CheckCircle2, Clock3, ListTodo } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { toTask } from "@/lib/mappers/task"
+import {TaskRow} from "@/components/tasks/task-row";
 
 type Props = {
     projectId: string
 }
 
 export default function AdvancedDashboard({ projectId }: Props) {
-    const [filter, setFilter] = useState<string | null>(null)
+    const router = useRouter()
     const [tasks, setTasks] = useState<Task[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -25,8 +31,13 @@ export default function AdvancedDashboard({ projectId }: Props) {
             try {
                 setLoading(true)
                 setError(null)
-                const data = (await GET_METHOD(`/api/projects/${projectId}/tasks`)) as ApiResponse
+
+                const data = (await GET_METHOD(
+                    `/api/projects/${projectId}/tasks`
+                )) as ApiResponse
+
                 if (!active) return
+
                 const items = Array.isArray(data?.tasks) ? data.tasks : []
                 setTasks(items.map((item) => toTask(item, projectId)))
             } catch {
@@ -46,112 +57,209 @@ export default function AdvancedDashboard({ projectId }: Props) {
         }
     }, [projectId])
 
-    const { statusCount, overdue, userStats } = buildAdvancedStats(tasks)
+    const {
+        currentMonth,
+        selectedMonth,
+        setSelectedMonth,
+        listFilter,
+        setListFilter,
+        monthlyData,
+        pieData,
+        filteredTasks,
+        totalCount,
+        completedCount,
+        overdueCount,
+        cancelledCount,
+    } = useStats(tasks)
 
-    // PIE DATA
-    const pieData = Object.entries(statusCount).map(
-        ([key, value]) => ({
-            name: key,
-            value,
-        })
-    )
+    const filterLabel =
+        listFilter.kind === "all"
+            ? null
+            : listFilter.kind === "done"
+                ? "done"
+                : listFilter.kind === "overdue"
+                    ? "overdue"
+                    : listFilter.kind === "cancelled"
+                        ? "cancelled"
+                    : listFilter.status
 
-    // FILTERED TASKS
-    const safeTasks = Array.isArray(tasks) ? tasks : []
-    const filteredTasks = useMemo(() => {
-        if (!filter) return tasks
-        return tasks.filter((t) => t.status === filter)
-    }, [tasks, filter])
+    const openTaskDetail = (task: Task) => {
+        const pid = task.projectId ?? projectId
+        router.push(`/project/${pid}/tasks?taskId=${task.id}`)
+    }
 
     return (
         <div className="space-y-6">
-
-            {/* OVERDUE */}
-            <div className="text-red-500 font-semibold">
-                Quá hạn: {overdue}
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-
-                {/* PIE */}
-                <ClickablePie
-                    data={pieData}
-                    onClick={(name: string) => setFilter(name)}
+            {/* STATS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard
+                    title="Tổng công việc"
+                    value={totalCount}
+                    icon={<ListTodo className="h-5 w-5" />}
+                    active={listFilter.kind === "all" && !selectedMonth}
+                    onClick={() => {
+                        setListFilter({ kind: "all" })
+                        setSelectedMonth(null)
+                    }}
                 />
 
-                {/* TOP USER */}
-                <TopUserChart data={userStats} />
+                <StatCard
+                    title="Đã hoàn thành"
+                    value={completedCount}
+                    icon={<CheckCircle2 className="h-5 w-5 text-green-500" />}
+                    active={listFilter.kind === "done"}
+                    onClick={() => setListFilter({ kind: "done" })}
+                />
 
+                <StatCard
+                    title="Quá hạn"
+                    value={overdueCount}
+                    icon={<Clock3 className="h-5 w-5 text-red-500" />}
+                    active={listFilter.kind === "overdue"}
+                    onClick={() => setListFilter({ kind: "overdue" })}
+                />
+                <StatCard
+                    title="Đã hủy"
+                    value={cancelledCount}
+                    icon={<CheckCircle2 className="h-5 w-5 text-green-500" />}
+                    active={listFilter.kind === "cancelled"}
+                    onClick={() => setListFilter({ kind: "cancelled" })}
+                />
             </div>
-            {/* FILTER INFO */}
-            {filter && (
-                <div>
-                    Đang lọc: <b>{filter}</b>
-                    <button onClick={() => setFilter(null)}>
-                        ❌
-                    </button>
+
+            {/* CHARTS */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {/* PIE */}
+                <Card className="rounded-2xl">
+                    <CardHeader>
+                        <CardTitle>Trạng thái công việc</CardTitle>
+                        {selectedMonth
+                            ? <>Thống kê theo tháng: <span className="font-medium">{selectedMonth}</span></>
+                            : <>Thống kê toàn bộ dự án</>}
+                    </CardHeader>
+
+                    <CardContent>
+                        <ClickablePie
+                            data={pieData}
+                            onClick={(name: string) =>
+                                setListFilter({ kind: "status", status: name })
+                            }
+                        />
+                    </CardContent>
+                </Card>
+
+                {/* MONTHLY */}
+                <Card className="rounded-2xl">
+                    <CardHeader>
+                        <CardTitle>Task theo tháng</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                            Nhấn vào cột tháng để đổi thống kê theo tháng
+                        </p>
+                    </CardHeader>
+
+                    <CardContent>
+                        <TaskMonthlyChart
+                            data={monthlyData}
+                            onSelectMonth={(month) => setSelectedMonth(month)}
+                        />
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* FILTER */}
+            {filterLabel && (
+                <div className="flex items-center justify-between rounded-xl border px-4 py-3 bg-muted/30">
+                    <span className="text-sm">
+                        Đang lọc theo:{" "}
+                        <span className="font-semibold">{filterLabel}</span>
+                    </span>
+
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setListFilter({ kind: "all" })}
+                    >
+                        Xóa lọc
+                    </Button>
                 </div>
             )}
-            {/* TASK LIST */}
-            <div>
-                <h3 className="font-semibold mb-2">Task List</h3>
 
-                <div className="space-y-2">
+            {/* TASK LIST */}
+            <Card className="rounded-2xl">
+                <CardHeader>
+                    <CardTitle>Danh sách công việc</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                        {filteredTasks.length} công việc hiển thị
+                    </p>
+                </CardHeader>
+
+                <CardContent className="space-y-3">
                     {loading && (
-                        <p className="text-sm text-muted-foreground">Đang tải task...</p>
+                        <p className="text-sm text-muted-foreground">
+                            Đang tải dữ liệu...
+                        </p>
                     )}
+
                     {!loading && error && (
                         <p className="text-sm text-red-500">{error}</p>
                     )}
-                    {!loading && !error && filteredTasks.length === 0 && (
-                        <p className="text-sm text-muted-foreground">Không có task phù hợp.</p>
-                    )}
-                    {!loading && !error && filteredTasks.length > 0 && (
-                        filteredTasks.map((t) => (
-                            <div
-                                key={t.id}
-                                className="p-2 border rounded"
-                            >
-                                {t.title} - {t.status}
-                            </div>
-                        ))
-                    )}
-                </div>
-            </div>
 
+                    {!loading && !error && filteredTasks.length === 0 && (
+                        <p className="text-sm text-muted-foreground">
+                            Không có dữ liệu phù hợp.
+                        </p>
+                    )}
+
+                    {!loading &&
+                        !error &&
+                        filteredTasks.map((task) => (
+                            <TaskRow key={task.id} task={task} />
+                        ))}
+                </CardContent>
+            </Card>
         </div>
     )
 }
 
-function toTask(item: ApiTask, projectId?: string): Task {
-    const code = `TSK-${item._id.slice(-6).toUpperCase()}`
-    const priority =
-        item.importance === "low" || item.importance === "medium" || item.importance === "high"
-            ? item.importance
-            : undefined
+/* CARD */
+function StatCard({
+    title,
+    value,
+    icon,
+    active,
+    onClick,
+}: {
+    title: string
+    value: number
+    icon: ReactNode
+    active?: boolean
+    onClick?: () => void
+}) {
+    return (
+        <Card
+            className={[
+                "rounded-2xl",
+                onClick ? "cursor-pointer hover:bg-muted/30 transition" : "",
+                active ? "ring-1 ring-primary/30" : "",
+            ].join(" ")}
+            onClick={onClick}
+            role={onClick ? "button" : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            onKeyDown={(e) => {
+                if (!onClick) return
+                if (e.key === "Enter" || e.key === " ") onClick()
+            }}
+        >
+            <CardContent className="p-5 flex items-center justify-between">
+                <div>
+                    <p className="text-sm text-muted-foreground">{title}</p>
+                    <h3 className="text-2xl font-bold mt-1">{value}</h3>
+                </div>
 
-    const assignees = Array.isArray(item.assignees)
-        ? item.assignees.map((a) => {
-              if (typeof a === "string") return a
-              const fullName = `${a.lastName ?? ""} ${a.firstName ?? ""}`.trim()
-              return fullName || a.name || a.email || "User"
-          })
-        : undefined
-
-    return {
-        id: item._id,
-        projectId,
-        code,
-        title: item.title,
-        status: item.status as TaskStatus,
-        priority,
-        description: item.description ?? undefined,
-        assignees,
-        labels: item.labels,
-        startDate: item.startDate ?? undefined,
-        dueDate: item.dueDate ?? undefined,
-        estimate: item.estimate ?? undefined,
-        createdAt: item.createdAt ?? undefined,
-        updatedAt: item.updatedAt ?? undefined,
-    }
+                <div className="rounded-xl bg-muted p-3">{icon}</div>
+            </CardContent>
+        </Card>
+    )
 }
+
+

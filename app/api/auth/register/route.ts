@@ -32,7 +32,15 @@ export async function POST(req: Request) {
                 { status: 400 }
             )
         }
+        // Check số điện thoại tồn tại
+        const existingByPhone = await User.findOne({ phone })
 
+        if (existingByPhone) {
+            return NextResponse.json(
+                { message: "Số điện thoại đã tồn tại" },
+                { status: 400 }
+            )
+        }
         await User.create({
             firstName,
             lastName,

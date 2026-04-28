@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
         if (!email) {
             return NextResponse.json(
-                { message: "Email khÃ´ng há»£p lá»‡" },
+                { message: "Email không hợp lệ" },
                 { status: 400 }
             )
         }
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
         const user = await User.findOne({ email }).select("+resetPasswordToken +resetPasswordExpires")
         if (!user) {
             return NextResponse.json(
-                { message: "Email khÃ´ng tá»“n táº¡i trong há»‡ thá»‘ng." },
+                { message: "Email không tồn tại trong hệ thống." },
                 { status: 404 }
             )
         }
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
         const origin = getRequestOrigin(req)
         if (!origin) {
             return NextResponse.json(
-                { message: "KhÃ´ng xÃ¡c Ä‘á»‹nh Ä‘Æ°á»£c host" },
+                { message: "Không xác định được host" },
                 { status: 500 }
             )
         }
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true })
     } catch {
         return NextResponse.json(
-            { message: "KhÃ´ng thá»ƒ gá»­i email Ä‘áº·t láº¡i máº­t kháº©u" },
+            { message: "Không thể gửi email đặt lại mật khẩu" },
             { status: 500 }
         )
     }

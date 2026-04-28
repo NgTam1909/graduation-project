@@ -97,7 +97,13 @@ export default function RegisterForm() {
             setLoading(false)
         }
     }
-
+    const isFormValid =
+        form.firstName.trim() &&
+        form.lastName.trim() &&
+        form.email.trim() &&
+        form.phone.trim() &&
+        form.password.trim() &&
+        form.confirmPassword.trim()
     return (
         <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
             <Card className="w-full max-w-md shadow-xl border-0 rounded-2xl">
@@ -216,7 +222,7 @@ export default function RegisterForm() {
                         <Button
                             type="submit"
                             className="w-full rounded-xl"
-                            disabled={loading}
+                            disabled={loading || !isFormValid}
                         >
                             {loading ? "Đang đăng ký ..." : "Đăng ký"}
                         </Button>

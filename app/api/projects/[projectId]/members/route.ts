@@ -5,6 +5,7 @@ import { connectDB } from "@/lib/db"
 import Project, { ProjectRole, IProjectMember } from "@/models/project.model"
 import User from "@/models/user.model"
 import { updateMemberRoleSchema } from "@/lib/validations/member.validation"
+import ActivityLog, { ActivityAction } from "@/models/activityLog.model"
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
 
@@ -33,7 +34,7 @@ export async function GET(
 
         const { projectId } = await params
         if (!projectId) {
-            return NextResponse.json({ message: "KhÃ´ng thá»¥c projectId" }, { status: 400 })
+            return NextResponse.json({ message: "Không thấy projectId" }, { status: 400 })
         }
 
         await connectDB()
@@ -44,7 +45,7 @@ export async function GET(
         }
 
         if (!project) {
-            return NextResponse.json({ message: "KhÃ´ng tÃ¬m tháº¥y dá»± Ã¡n" }, { status: 404 })
+            return NextResponse.json({ message: "Không tìm thấy dự án" }, { status: 404 })
         }
 
         const isMember =
@@ -74,7 +75,7 @@ export async function GET(
                 u._id.toString(),
                 {
                     id: u._id.toString(),
-                    name: `${u.firstName} ${u.lastName}`.trim(),
+                    name: `${u.lastName} ${u.firstName}`.trim(),
                     email: u.email,
                 },
             ])
@@ -98,7 +99,7 @@ export async function GET(
         return NextResponse.json({ members, currentRole })
     } catch {
         return NextResponse.json(
-            { message: "KhÃ´ng thá»ƒ láº¥y danh sÃ¡ch thÃ nh viÃªn" },
+            { message: "Không thấy thành viên dự án" },
             { status: 500 }
         )
     }
@@ -116,14 +117,14 @@ export async function PATCH(
 
         const { projectId } = await params
         if (!projectId) {
-            return NextResponse.json({ message: "KhÃƒÂ´ng thÃ¡Â»Â¥c projectId" }, { status: 400 })
+            return NextResponse.json({ message: "Không thấy projectId" }, { status: 400 })
         }
 
         const body = await req.json()
         const parsed = updateMemberRoleSchema.safeParse(body)
         if (!parsed.success) {
             return NextResponse.json(
-                { message: "Dá»¯ liá»‡u khÃ´ng há»£p lá»‡", errors: parsed.error.flatten() },
+                { message: "Dữ liệu không hợp lệ", errors: parsed.error.flatten() },
                 { status: 400 }
             )
         }
@@ -136,7 +137,7 @@ export async function PATCH(
         }
 
         if (!project) {
-            return NextResponse.json({ message: "KhÃƒÂ´ng tÃƒÂ¬m thÃ¡ÂºÂ¥y dÃ¡Â»Â± ÃƒÂ¡n" }, { status: 404 })
+            return NextResponse.json({ message: "Không tìm thấy dự án" }, { status: 404 })
         }
 
         const currentRole =
@@ -153,7 +154,7 @@ export async function PATCH(
         const ownerId = project.owner.userId.toString()
         if (memberId === ownerId) {
             return NextResponse.json(
-                { message: "KhÃƒÂ´ng thá»ƒ Ä‘á»•i quyá»n owner" },
+                { message: "Không thể đổi quyền Admin" },
                 { status: 400 }
             )
         }
@@ -163,13 +164,123 @@ export async function PATCH(
             return NextResponse.json({ message: "Member not found" }, { status: 404 })
         }
 
+        const oldRole = member.role
         member.role = role
         await project.save()
+
+        if (oldRole !== role) {
+            try {
+                await ActivityLog.create({
+                    userId: new mongoose.Types.ObjectId(userId),
+                    projectId: project._id,
+                    entityType: "Invite",
+                    action: ActivityAction.CHANGE_ROLE,
+                    oldValue: { role: oldRole },
+                    newValue: { role },
+                    metadata: {
+                        projectId: project.projectId,
+                        projectTitle: project.title,
+                        affectedUserIds: [memberId],
+                        targetUserId: memberId,
+                    },
+                })
+            } catch {
+                // ignore audit log errors
+            }
+        }
 
         return NextResponse.json({ success: true })
     } catch {
         return NextResponse.json(
-            { message: "KhÃƒÂ´ng thá»ƒ cáº­p nháº­t quyá»n" },
+            { message: "Không thấy cập nhật quyền" },
+            { status: 500 }
+        )
+    }
+}
+
+export async function DELETE(
+    req: NextRequest,
+    { params }: { params: Promise<{ projectId: string }> }
+) {
+    try {
+        const userId = await getUserIdFromRequest(req)
+        if (!userId) {
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+        }
+
+        const { projectId } = await params
+        if (!projectId) {
+            return NextResponse.json({ message: "Không thuộc projectId" }, { status: 400 })
+        }
+
+        const body = await req.json()
+        const memberId = typeof body?.memberId === "string" ? body.memberId : ""
+        if (!memberId) {
+            return NextResponse.json({ message: "Thiếu memberId" }, { status: 400 })
+        }
+
+        await connectDB()
+
+        let project = await Project.findOne({ projectId })
+        if (!project && mongoose.isValidObjectId(projectId)) {
+            project = await Project.findById(projectId)
+        }
+
+        if (!project) {
+            return NextResponse.json({ message: "Không tìm thấy dự án" }, { status: 404 })
+        }
+
+        const currentRole =
+            project.owner?.userId?.toString() === userId
+                ? project.owner.role
+                : project.members.find((m: IProjectMember) => m.userId?.toString() === userId)?.role ??
+                  null
+
+        if (currentRole !== ProjectRole.ADMIN) {
+            return NextResponse.json({ message: "Forbidden" }, { status: 403 })
+        }
+
+        const ownerId = project.owner.userId.toString()
+        if (memberId === ownerId) {
+            return NextResponse.json(
+                { message: "Không thể xóa admin khỏi dự án" },
+                { status: 400 }
+            )
+        }
+
+        const memberIndex = project.members.findIndex(
+            (m: IProjectMember) => m.userId?.toString() === memberId
+        )
+        if (memberIndex === -1) {
+            return NextResponse.json({ message: "Member not found" }, { status: 404 })
+        }
+
+        const removedMember = project.members[memberIndex]
+        project.members.splice(memberIndex, 1)
+        await project.save()
+
+        try {
+            await ActivityLog.create({
+                userId: new mongoose.Types.ObjectId(userId),
+                projectId: project._id,
+                entityType: "Invite",
+                action: ActivityAction.REMOVE_MEMBER,
+                oldValue: { role: removedMember.role },
+                metadata: {
+                    projectId: project.projectId,
+                    projectTitle: project.title,
+                    affectedUserIds: [memberId],
+                    targetUserId: memberId,
+                },
+            })
+        } catch {
+            // ignore audit log errors
+        }
+
+        return NextResponse.json({ success: true })
+    } catch {
+        return NextResponse.json(
+            { message: "Không thể xóa thành viên" },
             { status: 500 }
         )
     }

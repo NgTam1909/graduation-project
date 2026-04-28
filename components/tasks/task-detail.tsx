@@ -1,291 +1,177 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-import { Calendar, Clock, MessageSquare, Tag, User, Check } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Task } from "@/types/task"
-import { GET_METHOD, PATCH_METHOD } from "@/lib/req"
 import { Input } from "@/components/ui/input"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
+
+import {
+    taskDetailActionLabels,
+    taskDetailFieldLabels,
+    taskDetailPriorityOptions,
+} from "@/constants/task-detail"
+
+import { TaskSubtasks } from "@/components/tasks/task-subtasks"
+import { useTaskDetail } from "@/hooks/useTaskDetail"
+
 import { ActivityLog } from "@/types/activity-log"
+import { Task } from "@/types/task"
 
 type TaskDetailProps = {
     task: Task
 }
 
-type AssigneeOption = {
-    id: string
-    name: string
-    email?: string
+const getPriorityBadgeVariant = (priority?: string) => {
+    if (priority === "high") return "destructive" as const
+    if (priority === "medium") return "default" as const
+    return "secondary" as const
 }
 
-type AssigneeResponse = {
-    currentUserId: string
-    currentUserRole: "Admin" | "Leader" | "Member"
-    assignees: AssigneeOption[]
+const formatLogTime = (value: string) => {
+    const date = new Date(value)
+
+    if (Number.isNaN(date.getTime())) return value
+
+    return date.toLocaleDateString("vi-VN")
 }
 
 export function TaskDetail({ task }: TaskDetailProps) {
-    const [isOpen, setIsOpen] = useState(false)
-    const [availableUsers, setAvailableUsers] = useState<AssigneeOption[]>([])
-    const [selectedUsers, setSelectedUsers] = useState<string[]>(task.assigneeIds || [])
-    const [currentUserRole, setCurrentUserRole] = useState<AssigneeResponse["currentUserRole"] | null>(null)
-    const [startDateValue, setStartDateValue] = useState(task.startDateValue ?? "")
-    const [dueDateValue, setDueDateValue] = useState(task.dueDateValue ?? "")
-    const [estimateValue, setEstimateValue] = useState(
-        task.estimate != null ? String(task.estimate) : ""
-    )
-    const [isEditingEstimate, setIsEditingEstimate] = useState(false)
-    const [savingField, setSavingField] = useState<string | null>(null)
-    const [saveError, setSaveError] = useState<string | null>(null)
-    const [auditLogs, setAuditLogs] = useState<ActivityLog[]>([])
-    const [auditLoading, setAuditLoading] = useState(false)
-    const [auditError, setAuditError] = useState<string | null>(null)
-    const dropdownRef = useRef<HTMLDivElement>(null)
-    const startDateRef = useRef<HTMLInputElement>(null)
-    const dueDateRef = useRef<HTMLInputElement>(null)
+    const {
+        isOpen,
+        setIsOpen,
 
-    const actionLabels: Record<string, string> = {
-        CREATE_PROJECT: "Tạo project",
-        UPDATE_PROJECT: "Cập nhật project",
-        DELETE_PROJECT: "Xóa project",
-        INVITE_MEMBER: "Mời thành viên",
-        CHANGE_ROLE: "Đổi vai trò",
-        CREATE_TASK: "Tạo task",
-        UPDATE_TASK: "Cập nhật task",
-        UPDATE_TASK_STATUS: "Đổi trạng thái task",
+        availableUsers,
+        selectedUsers,
+
+        titleValue,
+        descriptionValue,
+        priorityValue,
+        startDateValue,
+        dueDateValue,
+        estimateValue,
+
+        isEditingTitle,
+        isEditingDescription,
+        isEditingEstimate,
+
+        commentValue,
+
+        timelineItems,
+
+        saveError,
+        auditLoading,
+        commentsLoading,
+        auditError,
+        commentsError,
+
+        dropdownRef,
+        startDateRef,
+        dueDateRef,
+
+        setTitleValue,
+        setDescriptionValue,
+        setEstimateValue,
+        setCommentValue,
+
+        setIsEditingTitle,
+        setIsEditingDescription,
+        setIsEditingEstimate,
+
+        handleSelectUser,
+        handleTitleBlur,
+        handleDescriptionBlur,
+        handlePriorityChange,
+        handleStartDateChange,
+        handleDueDateChange,
+        handleEstimateBlur,
+        handleCommentSubmit,
+    } = useTaskDetail(task)
+
+    const disableAssigneeButton = availableUsers.length === 0
+
+    const getAssigneeNames = () => {
+        if (!selectedUsers.length) return "Chưa nhận"
+
+        return selectedUsers
+            .map((assigneeId) => {
+                const user = availableUsers.find((item) => item.id === assigneeId)
+                return user?.name ?? assigneeId
+            })
+            .join(", ")
     }
 
-    const fieldLabels: Record<string, string> = {
-        title: "Tiêu đề",
-        description: "Mô tả",
-        status: "Trạng thái",
-        importance: "Mức độ",
-        labels: "Nhãn",
-        estimate: "Estimate",
-        assignees: "Người thực hiện",
-        startDate: "Ngày bắt đầu",
-        dueDate: "Ngày kết thúc",
-        projectId: "Project",
-    }
+    const formatLogValue = (key: string, value: unknown) => {
+        if (value === null || value === undefined || value === "") return "Trống"
 
-    const formatLogTime = (value: string) => {
-        const date = new Date(value)
-        if (Number.isNaN(date.getTime())) return value
-        return date.toLocaleString("vi-VN")
-    }
-
-    const formatFieldValue = (key: string, value: unknown) => {
-        if (value === null || value === undefined || value === "") return "trống"
         if (Array.isArray(value)) {
             if (key === "assignees") {
-                const names = value.map((assigneeId) => {
-                    const user = availableUsers.find((u) => u.id === assigneeId)
-                    return user?.name ?? String(assigneeId)
-                })
-                return names.join(", ") || "trống"
+                return (
+                    value
+                        .map((assigneeId) => {
+                            const user = availableUsers.find(
+                                (item) => item.id === String(assigneeId)
+                            )
+
+                            return user?.name ?? String(assigneeId)
+                        })
+                        .join(", ") || "Trống"
+                )
             }
+
             return value.map((item) => String(item)).join(", ")
         }
+
         if (typeof value === "string") {
-            if (key === "startDate" || key === "dueDate") {
-                const date = new Date(value)
-                if (!Number.isNaN(date.getTime())) {
-                    return date.toLocaleDateString("vi-VN")
-                }
+            const date = new Date(value)
+
+            if (
+                !Number.isNaN(date.getTime()) &&
+                (
+                    key === "startDate" ||
+                    key === "dueDate" ||
+                    /^\d{4}-\d{2}-\d{2}T/.test(value)
+                )
+            ) {
+                return date.toLocaleDateString("vi-VN")
             }
-            return value
         }
-        if (typeof value === "number" || typeof value === "boolean") {
-            return String(value)
-        }
-        return JSON.stringify(value)
+
+        return String(value)
     }
 
     const getLogChanges = (log: ActivityLog) => {
         const oldValue = (log.oldValue ?? {}) as Record<string, unknown>
         const newValue = (log.newValue ?? {}) as Record<string, unknown>
-        const keys = Array.from(new Set([...Object.keys(oldValue), ...Object.keys(newValue)]))
+
+        const keys = Array.from(
+            new Set([
+                ...Object.keys(oldValue),
+                ...Object.keys(newValue),
+            ])
+        )
+
         return keys
-            .filter((key) => JSON.stringify(oldValue[key]) !== JSON.stringify(newValue[key]))
+            .filter(
+                (key) =>
+                    JSON.stringify(oldValue[key]) !==
+                    JSON.stringify(newValue[key])
+            )
             .map((key) => ({
                 key,
-                label: fieldLabels[key] ?? key,
-                from: formatFieldValue(key, oldValue[key]),
-                to: formatFieldValue(key, newValue[key]),
+                label: taskDetailFieldLabels[key] ?? key,
+                from: formatLogValue(key, oldValue[key]),
+                to: formatLogValue(key, newValue[key]),
             }))
     }
-
-    const loadAuditLogs = async () => {
-        if (!task.id) return
-        try {
-            setAuditLoading(true)
-            setAuditError(null)
-            const data = (await GET_METHOD(`/api/activity/task/${task.id}`)) as {
-                logs?: ActivityLog[]
-            }
-            setAuditLogs(Array.isArray(data?.logs) ? data.logs : [])
-        } catch {
-            setAuditError("Không thể tải log audit")
-        } finally {
-            setAuditLoading(false)
-        }
-    }
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false)
-                setSelectedUsers(task.assigneeIds || [])
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside)
-        return () => document.removeEventListener("mousedown", handleClickOutside)
-    }, [task.assigneeIds])
-
-    useEffect(() => {
-        setStartDateValue(task.startDateValue ?? "")
-        setDueDateValue(task.dueDateValue ?? "")
-        setEstimateValue(task.estimate != null ? String(task.estimate) : "")
-        setIsEditingEstimate(false)
-        setSaveError(null)
-        setSavingField(null)
-    }, [task])
-
-    useEffect(() => {
-        loadAuditLogs()
-    }, [task.id])
-
-    useEffect(() => {
-        const handleTaskUpdated = () => {
-            loadAuditLogs()
-        }
-        window.addEventListener("task:updated", handleTaskUpdated)
-        return () => window.removeEventListener("task:updated", handleTaskUpdated)
-    }, [task.id])
-
-    useEffect(() => {
-        if (!task.projectId) return
-        let active = true
-
-        const load = async () => {
-            try {
-                const data = (await GET_METHOD(
-                    `/api/projects/${task.projectId}/assignees`
-                )) as AssigneeResponse
-                if (!active) return
-                setAvailableUsers(Array.isArray(data.assignees) ? data.assignees : [])
-                setCurrentUserRole(data.currentUserRole)
-            } catch {
-                if (active) {
-                    setAvailableUsers([])
-                    setCurrentUserRole(null)
-                }
-            }
-        }
-
-        load()
-
-        return () => {
-            active = false
-        }
-    }, [task.projectId])
-
-    const handleSelectUser = async (userId: string) => {
-        const newSelectedUsers =
-            currentUserRole === "Member"
-                ? [userId]
-                : selectedUsers.includes(userId)
-                    ? selectedUsers.filter((id) => id !== userId)
-                    : [...selectedUsers, userId]
-
-        setSelectedUsers(newSelectedUsers)
-
-        try {
-            setSavingField("assignees")
-            setSaveError(null)
-            await PATCH_METHOD(`/api/task/${task.id}`, {
-                assignees: newSelectedUsers,
-            })
-            window.dispatchEvent(new CustomEvent("task:updated"))
-            setIsOpen(false)
-        } catch (error) {
-            console.error("Failed to update assignees:", error)
-            setSelectedUsers(task.assigneeIds || [])
-            setSaveError("Cáº­p nháº­t ngÆ°á»i thÃ¡Â»Â±c hiÃ¡Â»â€¡n tháº¥t báº¡i")
-        } finally {
-            setSavingField(null)
-        }
-    }
-
-    const handleStartDateChange = async (value: string) => {
-        setStartDateValue(value)
-        try {
-            setSavingField("startDate")
-            setSaveError(null)
-            await PATCH_METHOD(`/api/task/${task.id}`, { startDate: value ?? "" })
-            window.dispatchEvent(new CustomEvent("task:updated"))
-        } catch {
-            setSaveError("Cáº­p nháº­t ngÃ y báº¯t Ä‘áº§u tháº¥t báº¡i")
-        } finally {
-            setSavingField(null)
-        }
-    }
-
-    const handleDueDateChange = async (value: string) => {
-        setDueDateValue(value)
-        try {
-            setSavingField("dueDate")
-            setSaveError(null)
-            await PATCH_METHOD(`/api/task/${task.id}`, { dueDate: value ?? "" })
-            window.dispatchEvent(new CustomEvent("task:updated"))
-        } catch {
-            setSaveError("Cáº­p nháº­t ngÃ y káº¿t thÃºc tháº¥t báº¡i")
-        } finally {
-            setSavingField(null)
-        }
-    }
-
-    const handleEstimateBlur = async () => {
-        try {
-            setSavingField("estimate")
-            setSaveError(null)
-            if (estimateValue.trim() === "") {
-                await PATCH_METHOD(`/api/task/${task.id}`, { estimate: null })
-                window.dispatchEvent(new CustomEvent("task:updated"))
-                setSavingField(null)
-                return
-            }
-            const num = Number(estimateValue)
-            if (Number.isNaN(num)) {
-                setSaveError("Estimate khÃ´ng há»£p lá»‡")
-                setSavingField(null)
-                return
-            }
-            await PATCH_METHOD(`/api/task/${task.id}`, { estimate: num })
-            window.dispatchEvent(new CustomEvent("task:updated"))
-        } catch {
-            setSaveError("Cáº­p nháº­t estimate tháº¥t báº¡i")
-        } finally {
-            setSavingField(null)
-        }
-    }
-
-    const getAssigneeNames = () => {
-        if (!selectedUsers || selectedUsers.length === 0) return "ChÆ°a nháº­n"
-
-        const names = selectedUsers.map((assigneeId) => {
-            const user = availableUsers.find((u) => u.id === assigneeId)
-            if (user) return user.name
-            const fallback = task.assignees?.find((name) => !!name)
-            return fallback || assigneeId
-        })
-
-        return names.join(", ")
-    }
-
-    const disableAssigneeButton = availableUsers.length === 0
 
     return (
         <div className="space-y-6">
@@ -294,55 +180,126 @@ export function TaskDetail({ task }: TaskDetailProps) {
                     <Badge variant="outline" className="text-muted-foreground">
                         {task.code}
                     </Badge>
-                    <Badge variant="secondary">{task.status}</Badge>
-                    {task.priority && (
-                        <Badge
-                            variant={
-                                task.priority === "high"
-                                    ? "destructive"
-                                    : task.priority === "medium"
-                                        ? "default"
-                                        : "secondary"
-                            }
+
+                    <Badge variant="secondary">
+                        {task.status}
+                    </Badge>
+
+                    <Select
+                        value={priorityValue}
+                        onValueChange={(value) =>
+                            void handlePriorityChange(
+                                value as "low" | "medium" | "high" | ""
+                            )
+                        }
+                    >
+                        <SelectTrigger className="h-8 w-[132px] border-0 px-0 shadow-none focus:ring-0">
+                            <Badge variant={getPriorityBadgeVariant(priorityValue)}>
+                                <SelectValue placeholder="None" />
+                            </Badge>
+                        </SelectTrigger>
+
+                        <SelectContent>
+                            {taskDetailPriorityOptions.map((option) => (
+                                <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                >
+                                    {option.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div>
+                    {!isEditingTitle ? (
+                        <button
+                            type="button"
+                            className="text-left text-xl font-semibold hover:text-foreground"
+                            onClick={() => setIsEditingTitle(true)}
                         >
-                            {task.priority}
-                        </Badge>
+                            {titleValue || "Chưa có tiêu đề"}
+                        </button>
+                    ) : (
+                        <Input
+                            value={titleValue}
+                            onChange={(e) =>
+                                setTitleValue(e.target.value)
+                            }
+                            onBlur={() => {
+                                setIsEditingTitle(false)
+                                void handleTitleBlur()
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    setIsEditingTitle(false)
+                                    void handleTitleBlur()
+                                }
+                            }}
+                            autoFocus
+                            className="text-xl font-semibold"
+                        />
                     )}
                 </div>
-                <h2 className="text-xl font-semibold">{task.title}</h2>
-                {task.description && (
-                    <p className="text-sm text-muted-foreground">{task.description}</p>
-                )}
+
+                <div>
+                    {!isEditingDescription ? (
+                        <button
+                            type="button"
+                            className="min-h-6 text-left text-sm text-muted-foreground hover:text-foreground"
+                            onClick={() =>
+                                setIsEditingDescription(true)
+                            }
+                        >
+                            {descriptionValue || "Chưa có mô tả"}
+                        </button>
+                    ) : (
+                        <Textarea
+                            value={descriptionValue}
+                            onChange={(e) =>
+                                setDescriptionValue(e.target.value)
+                            }
+                            onBlur={() => {
+                                setIsEditingDescription(false)
+                                void handleDescriptionBlur()
+                            }}
+                            autoFocus
+                        />
+                    )}
+                </div>
             </div>
+
+            <TaskSubtasks parentTask={task} />
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-sm font-medium">Properties</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                        Chi tiết
+                    </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex items-start justify-between relative" ref={dropdownRef}>
+                    <div className="relative flex items-start justify-between" ref={dropdownRef}>
                         <span className="text-sm text-muted-foreground">Người thực hiện</span>
-
                         <div className="relative">
                             <button
                                 type="button"
                                 onClick={() => setIsOpen(!isOpen)}
-                                className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent p-1 rounded-md transition-colors"
+                                className="flex cursor-pointer items-center gap-2 rounded-md p-1 text-sm transition-colors hover:bg-accent"
                                 disabled={disableAssigneeButton}
                             >
-                                <User size={14} className="text-muted-foreground" />
                                 <span>{getAssigneeNames()}</span>
                             </button>
 
                             {isOpen && (
-                                <div className="absolute right-0 mt-2 w-64 bg-popover border rounded-md shadow-lg z-50">
-                                    <div className="py-1 max-h-64 overflow-y-auto">
+                                <div className="absolute right-0 z-50 mt-2 w-64 rounded-md border bg-popover shadow-lg">
+                                    <div className="max-h-64 overflow-y-auto py-1">
                                         {availableUsers.length > 0 ? (
                                             availableUsers.map((user) => (
                                                 <div
                                                     key={user.id}
-                                                    onClick={() => handleSelectUser(user.id)}
-                                                    className="flex items-center justify-between px-3 py-2 hover:bg-accent cursor-pointer"
+                                                    onClick={() => void handleSelectUser(user.id)}
+                                                    className="flex cursor-pointer items-center justify-between px-3 py-2 hover:bg-accent"
                                                 >
                                                     <div className="flex-1">
                                                         <span className="text-sm">{user.name}</span>
@@ -351,15 +308,22 @@ export function TaskDetail({ task }: TaskDetailProps) {
                                                                 {user.email}
                                                             </p>
                                                         )}
+                                                        {user.position && (
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {user.position}
+                                                            </p>
+                                                        )}
+                                                        {user.skills && user.skills.length > 0 && (
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {user.skills.join(", ")}
+                                                            </p>
+                                                        )}
                                                     </div>
-                                                    {selectedUsers.includes(user.id) && (
-                                                        <Check size={14} className="text-primary ml-2" />
-                                                    )}
                                                 </div>
                                             ))
                                         ) : (
-                                            <div className="px-3 py-2 text-sm text-muted-foreground text-center">
-                                                Không có người thực hiện
+                                            <div className="px-3 py-2 text-center text-sm text-muted-foreground">
+                                                Chưa có người làm
                                             </div>
                                         )}
                                     </div>
@@ -373,25 +337,18 @@ export function TaskDetail({ task }: TaskDetailProps) {
                         <div className="flex items-center gap-2 text-sm">
                             <button
                                 type="button"
-                                className="flex items-center gap-2 hover:text-foreground"
-                                onClick={() => {
-                                    if (startDateRef.current?.showPicker) {
-                                        startDateRef.current.showPicker()
-                                    } else {
-                                        startDateRef.current?.focus()
-                                    }
-                                }}
+                                className="hover:text-foreground"
+                                onClick={() => startDateRef.current?.showPicker?.()}
                             >
-                                <Calendar size={14} className="text-muted-foreground" />
-                                <span>{startDateValue || "Chưa đặt"}</span>
+                                {startDateValue || "N/A"}
                             </button>
                             <Input
                                 ref={startDateRef}
                                 type="date"
-                                className="absolute h-0 w-0 opacity-0 pointer-events-none"
+                                className="pointer-events-none absolute h-0 w-0 opacity-0"
                                 value={startDateValue}
                                 max={dueDateValue || undefined}
-                                onChange={(e) => handleStartDateChange(e.target.value)}
+                                onChange={(e) => void handleStartDateChange(e.target.value)}
                             />
                         </div>
                     </div>
@@ -401,25 +358,18 @@ export function TaskDetail({ task }: TaskDetailProps) {
                         <div className="flex items-center gap-2 text-sm">
                             <button
                                 type="button"
-                                className="flex items-center gap-2 hover:text-foreground"
-                                onClick={() => {
-                                    if (dueDateRef.current?.showPicker) {
-                                        dueDateRef.current.showPicker()
-                                    } else {
-                                        dueDateRef.current?.focus()
-                                    }
-                                }}
+                                className="hover:text-foreground"
+                                onClick={() => dueDateRef.current?.showPicker?.()}
                             >
-                                <Calendar size={14} className="text-muted-foreground" />
-                                <span>{dueDateValue || "Chưa đặt"}</span>
+                                {dueDateValue || "N/A"}
                             </button>
                             <Input
                                 ref={dueDateRef}
                                 type="date"
-                                className="absolute h-0 w-0 opacity-0 pointer-events-none"
+                                className="pointer-events-none absolute h-0 w-0 opacity-0"
                                 value={dueDateValue}
                                 min={startDateValue || undefined}
-                                onChange={(e) => handleDueDateChange(e.target.value)}
+                                onChange={(e) => void handleDueDateChange(e.target.value)}
                             />
                         </div>
                     </div>
@@ -427,19 +377,17 @@ export function TaskDetail({ task }: TaskDetailProps) {
                     <Separator />
 
                     <div className="flex items-start justify-between">
-                        <span className="text-sm text-muted-foreground">Giới hạn (giờ)</span>
+                        <span className="text-sm text-muted-foreground">Giới hạn (h)</span>
                         <div className="flex items-center gap-2 text-sm">
-                            <button
-                                type="button"
-                                className="flex items-center gap-2 hover:text-foreground"
-                                onClick={() => setIsEditingEstimate(true)}
-                            >
-                                <Clock size={14} className="text-muted-foreground" />
-                                <span>
-                                    {estimateValue ? `${estimateValue}h` : "Chưa nhập"}
-                                </span>
-                            </button>
-                            {isEditingEstimate && (
+                            {!isEditingEstimate ? (
+                                <button
+                                    type="button"
+                                    className="hover:text-foreground"
+                                    onClick={() => setIsEditingEstimate(true)}
+                                >
+                                    {estimateValue ? `${estimateValue}h` : "0"}
+                                </button>
+                            ) : (
                                 <Input
                                     type="number"
                                     min={0}
@@ -448,7 +396,13 @@ export function TaskDetail({ task }: TaskDetailProps) {
                                     onChange={(e) => setEstimateValue(e.target.value)}
                                     onBlur={() => {
                                         setIsEditingEstimate(false)
-                                        handleEstimateBlur()
+                                        void handleEstimateBlur()
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            setIsEditingEstimate(false)
+                                            void handleEstimateBlur()
+                                        }
                                     }}
                                     autoFocus
                                 />
@@ -458,80 +412,88 @@ export function TaskDetail({ task }: TaskDetailProps) {
 
                     <div className="flex items-start justify-between">
                         <span className="text-sm text-muted-foreground">Nhãn</span>
-                        <div className="flex items-center gap-2 text-sm">
-                            <Tag size={14} className="text-muted-foreground" />
-                            <span>
-                                {task.labels && task.labels.length > 0
-                                    ? task.labels.join(", ")
-                                    : "Chưa gán"}
-                            </span>
-                        </div>
+                        <span className="text-sm">
+                            {task.labels && task.labels.length > 0 ? task.labels.join(", ") : "Không có"}
+                        </span>
                     </div>
 
                     <Separator />
-
                     <div className="flex items-start justify-between">
                         <span className="text-sm text-muted-foreground">Ngày tạo:</span>
                         <span className="text-sm">{task.createdAt ?? "N/A"}</span>
                     </div>
 
                     <div className="flex items-start justify-between">
-                        <span className="text-sm text-muted-foreground">Cập nhật:</span>
+                        <span className="text-sm text-muted-foreground">Cập nhật gần nhất:</span>
                         <span className="text-sm">{task.updatedAt ?? "N/A"}</span>
                     </div>
-                    {savingField && (
-                        <div className="text-xs text-muted-foreground">Saving...</div>
-                    )}
-                    {saveError && (
-                        <div className="text-xs text-red-500">{saveError}</div>
-                    )}
-                </CardContent>
-            </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Input
-                            placeholder="Comment"
-                        />
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {auditLoading && (
-                        <p className="text-sm text-muted-foreground">
-                            Đang tải log audit...
-                        </p>
-                    )}
+                    {saveError && <div className="text-xs text-red-500">{saveError}</div>}
+
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <Input
+                                placeholder="Bình luận"
+                                value={commentValue}
+                                onChange={(e) => setCommentValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault()
+                                        void handleCommentSubmit()
+                                    }
+                                }}
+                            />
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => void handleCommentSubmit()}
+                                disabled={commentValue.trim().length === 0}
+                            >
+                                Gửi
+                            </Button>
+                        </div>
+                        {commentsError && <p className="text-sm text-red-500">{commentsError}</p>}
+                    </div>
                     {!auditLoading && auditError && (
                         <p className="text-sm text-red-500">{auditError}</p>
                     )}
-                    {!auditLoading && !auditError && auditLogs.length === 0 && (
-                        <p className="text-sm text-muted-foreground">
-                            Chưa có log audit.
-                        </p>
-                    )}
-                    {!auditLoading && !auditError && auditLogs.length > 0 && (
+
+                    {!auditLoading && !commentsLoading && !auditError && timelineItems.length > 0 && (
                         <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                            {auditLogs.map((log) => {
-                                const changes = getLogChanges(log)
+                            {timelineItems.map((item) => {
+                                if (item.kind === "comment") {
+                                    return (
+                                        <div key={item.id} className="rounded-md border p-2">
+                                            <div className="text-sm font-medium">Bình luận</div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {(item.comment.user?.name ?? "Hệ thống") +
+                                                    "  " +
+                                                    formatLogTime(item.comment.createdAt)}
+                                            </div>
+                                            <div className="mt-2 text-sm">{item.comment.content}</div>
+                                        </div>
+                                    )
+                                }
+
+                                const changes = getLogChanges(item.log)
                                 return (
-                                    <div key={log.id} className="rounded-md border p-2">
+                                    <div key={item.id} className="rounded-md border p-2">
                                         <div className="text-sm font-medium">
-                                            {actionLabels[log.action] ?? log.action}
+                                            {taskDetailActionLabels[item.log.action] ?? item.log.action}
                                         </div>
                                         <div className="text-xs text-muted-foreground">
-                                            {(log.user?.name ?? "Hệ thống") +
-                                                " • " +
-                                                formatLogTime(log.createdAt)}
+                                            {(item.log.user?.name ?? "Hệ thống") +
+                                                "  " +
+                                                formatLogTime(item.log.createdAt)}
                                         </div>
                                         {changes.length > 0 && (
                                             <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                                                 {changes.map((change) => (
-                                                    <div key={`${log.id}-${change.key}`}>
+                                                    <div key={`${item.log.id}-${change.key}`}>
                                                         <span className="font-medium text-foreground/80">
                                                             {change.label}:
                                                         </span>{" "}
-                                                        {change.from} → {change.to}
+                                                        {change.to}
                                                     </div>
                                                 ))}
                                             </div>

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import mongoose from "mongoose"
 import { jwtVerify } from "jose"
 import { connectDB } from "@/lib/db"
-import Task from "@/models/task.model"
-import Project, { ProjectRole, IProjectMember } from "@/models/project.model"
+import Task, { TaskStatus } from "@/models/task.model"
+import Project, { IProjectMember, ProjectRole } from "@/models/project.model"
 import { createTaskSchema } from "@/lib/validations/task.validation"
 import ActivityLog, { ActivityAction } from "@/models/activityLog.model"
 
@@ -35,19 +35,17 @@ export async function POST(req: NextRequest) {
         const parsed = createTaskSchema.safeParse(body)
         if (!parsed.success) {
             return NextResponse.json(
-                { message: "Dá»¯ liá»‡u khÃ´ng há»£p lá»‡", errors: parsed.error.flatten() },
+                { message: "Dữ liệu không hợp lệ", errors: parsed.error.flatten() },
                 { status: 400 }
             )
         }
 
         const data = parsed.data
         const rawProjectId = data.projectId as string | undefined
+        const rawParentId = data.parentId as string | undefined
 
         if (!rawProjectId) {
-            return NextResponse.json(
-                { message: "Thiáº¿u project" },
-                { status: 400 }
-            )
+            return NextResponse.json({ message: "Thiếu project" }, { status: 400 })
         }
 
         let project = await Project.findOne({ projectId: rawProjectId })
@@ -56,10 +54,51 @@ export async function POST(req: NextRequest) {
         }
 
         if (!project) {
-            return NextResponse.json(
-                { message: "KhÃ´ng tÃ¬m tháº¥y dá»± Ã¡n" },
-                { status: 404 }
-            )
+            return NextResponse.json({ message: "Không tìm thấy dự án" }, { status: 404 })
+        }
+
+        let parentTask:
+            | {
+                  _id: mongoose.Types.ObjectId
+                  projectId: mongoose.Types.ObjectId
+                  status: TaskStatus
+                  parentId?: mongoose.Types.ObjectId | null
+              }
+            | null = null
+
+        if (rawParentId) {
+            if (!mongoose.isValidObjectId(rawParentId)) {
+                return NextResponse.json({ message: "parentId không hợp lệ" }, { status: 400 })
+            }
+
+            parentTask = await Task.findById(rawParentId)
+                .select("_id projectId status parentId")
+                .lean()
+
+            if (!parentTask) {
+                return NextResponse.json({ message: "Không tìm thấy task cha" }, { status: 404 })
+            }
+
+            if (parentTask.projectId.toString() !== project._id.toString()) {
+                return NextResponse.json(
+                    { message: "Task cha không thuộc project này" },
+                    { status: 400 }
+                )
+            }
+
+            if (parentTask.parentId) {
+                return NextResponse.json(
+                    { message: "Không hỗ trợ tạo task con nhiều cấp" },
+                    { status: 400 }
+                )
+            }
+
+            if (parentTask.status === TaskStatus.CANCELLED) {
+                return NextResponse.json(
+                    { message: "Task cha đã cancelled, không thể tạo task con" },
+                    { status: 400 }
+                )
+            }
         }
 
         let currentRole: ProjectRole | null = null
@@ -91,14 +130,13 @@ export async function POST(req: NextRequest) {
         }
 
         const requestedAssignees = data.assignees && data.assignees.length > 0 ? data.assignees : []
-
         const invalidAssignees = requestedAssignees.filter(
             (assigneeId) => !assignableIds.includes(assigneeId)
         )
 
         if (invalidAssignees.length > 0) {
             return NextResponse.json(
-                { message: "KhÃ´ng cÃ³ quyá»n gáº¯n ngÆ°á»i thÆ°á»±c hiá»‡n nÃ y" },
+                { message: "Không có quyền gán người thực hiện này" },
                 { status: 403 }
             )
         }
@@ -108,6 +146,7 @@ export async function POST(req: NextRequest) {
             projectId: project._id,
             creatorId: new mongoose.Types.ObjectId(userId),
             assignees: requestedAssignees.map((id) => new mongoose.Types.ObjectId(id)),
+            parentId: parentTask?._id,
             overDue: false,
         })
 
@@ -121,6 +160,7 @@ export async function POST(req: NextRequest) {
                 newValue: {
                     title: task.title,
                     status: task.status,
+                    priority: task.priority,
                     assignees: requestedAssignees,
                 },
             })
@@ -130,9 +170,6 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json(task)
     } catch {
-        return NextResponse.json(
-            { message: "Create task failed" },
-            { status: 500 }
-        )
+        return NextResponse.json({ message: "Tạo task thất bại" }, { status: 500 })
     }
 }

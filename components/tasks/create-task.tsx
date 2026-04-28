@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-
 import { createTaskSchema, CreateTaskInput } from "@/lib/validations/task.validation"
 import { useCreateTask } from "@/hooks/useCreateTask"
-import { GET_METHOD } from "@/lib/req"
-
+import { getTaskAssignees } from "@/services/task.service"
 import {
     Form,
     FormControl,
@@ -16,11 +14,9 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form"
-
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-
 import {
     Select,
     SelectContent,
@@ -28,27 +24,20 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-
-import { TaskStatus, ImportanceLevel } from "@/types/task"
+import { PriorityLevel, TaskStatus } from "@/types/task"
+import type { AssigneeOption, AssigneeResponse } from "@/types/task-detail"
 
 type CreateTaskFormProps = {
     projectId: string
+    parentId?: string
     onCreatedAction?: () => void
 }
 
-type AssigneeOption = {
-    id: string
-    name: string
-    email: string
-}
-
-type AssigneeResponse = {
-    currentUserId: string
-    currentUserRole: "Admin" | "Leader" | "Member"
-    assignees: AssigneeOption[]
-}
-
-export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTaskFormProps) {
+export default function CreateTaskForm({
+    projectId,
+    parentId,
+    onCreatedAction,
+}: CreateTaskFormProps) {
     const { createTask, loading, error } = useCreateTask()
     const today = new Date().toISOString().slice(0, 10)
     const [assigneeOptions, setAssigneeOptions] = useState<AssigneeOption[]>([])
@@ -61,8 +50,9 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
             title: "",
             description: "",
             status: TaskStatus.BACKLOG,
-            importance: ImportanceLevel.NONE,
+            priority: PriorityLevel.NONE,
             projectId,
+            parentId,
             startDate: "",
             dueDate: "",
             estimate: undefined,
@@ -71,13 +61,22 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
     })
 
     useEffect(() => {
+        form.setValue("projectId", projectId, {
+            shouldValidate: false,
+            shouldDirty: false,
+        })
+        form.setValue("parentId", parentId, {
+            shouldValidate: false,
+            shouldDirty: false,
+        })
+    }, [form, parentId, projectId])
+
+    useEffect(() => {
         let active = true
 
         const load = async () => {
             try {
-                const data = (await GET_METHOD(
-                    `/api/projects/${projectId}/assignees`
-                )) as AssigneeResponse
+                const data = await getTaskAssignees(projectId)
                 if (!active) return
                 setAssigneeOptions(Array.isArray(data.assignees) ? data.assignees : [])
                 setCurrentUserId(data.currentUserId)
@@ -103,7 +102,7 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
             }
         }
 
-        load()
+        void load()
 
         return () => {
             active = false
@@ -117,8 +116,9 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                 title: "",
                 description: "",
                 status: TaskStatus.BACKLOG,
-                importance: ImportanceLevel.NONE,
+                priority: PriorityLevel.NONE,
                 projectId,
+                parentId,
                 startDate: "",
                 dueDate: "",
                 estimate: undefined,
@@ -132,21 +132,14 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
     }
 
     const canAssignOthers = currentUserRole !== "Member"
-    const assignHelperText =
-        currentUserRole === "Member"
-            ? "Bạn chỉ có thể nhận task."
-            : currentUserRole === "Leader"
-                ? "Leader có thể giao task cho các thành viên Member."
-                : currentUserRole === "Admin"
-                    ? "Admin có thể giao task cho tất cả thành viên."
-                    : ""
 
     return (
         <div className="max-w-xl space-y-4">
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <input type="hidden" {...form.register("projectId")} />
+                    <input type="hidden" {...form.register("parentId")} />
 
-                    {/* TITLE */}
                     <FormField
                         control={form.control}
                         name="title"
@@ -160,7 +153,6 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         )}
                     />
 
-                    {/* DESCRIPTION */}
                     <FormField
                         control={form.control}
                         name="description"
@@ -175,46 +167,32 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         )}
                     />
 
-                    {/* STATUS */}
                     <FormField
                         control={form.control}
                         name="status"
-                        render={({ field }) => (
+                        render={() => (
                             <FormItem>
                                 <FormLabel>Trạng thái</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Chọn trạng thái" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {Object.values(TaskStatus).map((s) => (
-                                            <SelectItem key={s} value={s}>
-                                                {s}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+
+                                <FormControl>
+                                    <div className="flex h-10 w-full items-center rounded-md border bg-muted px-3 text-sm">
+                                        {TaskStatus.BACKLOG}
+                                    </div>
+                                </FormControl>
+
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
-
-                    {/* ASSIGNEE */}
                     <FormField
                         control={form.control}
                         name="assignees"
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Người thực hiện</FormLabel>
-                                {assignHelperText && (
-                                    <p className="text-xs text-muted-foreground">{assignHelperText}</p>
-                                )}
                                 <Select
                                     onValueChange={(value) => field.onChange(value ? [value] : [])}
                                     value={field.value?.[0] ?? ""}
-                                    disabled={!canAssignOthers}
                                 >
                                     <FormControl>
                                         <SelectTrigger>
@@ -224,7 +202,9 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                                     <SelectContent>
                                         {assigneeOptions.map((option) => (
                                             <SelectItem key={option.id} value={option.id}>
-                                                {option.name || option.email}
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm">{option.name || option.email}</span>
+                                                </div>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -234,23 +214,22 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         )}
                     />
 
-                    {/* IMPORTANCE */}
                     <FormField
                         control={form.control}
-                        name="importance"
+                        name="priority"
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Độ ưu tiên</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Mức độ ưu tiên của dự án" />
+                                            <SelectValue placeholder="Mức độ ưu tiên của task" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {Object.values(ImportanceLevel).map((i) => (
-                                            <SelectItem key={i} value={i}>
-                                                {i}
+                                        {Object.values(PriorityLevel).map((priority) => (
+                                            <SelectItem key={priority} value={priority}>
+                                                {priority}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -260,7 +239,6 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         )}
                     />
 
-                    {/* START DATE */}
                     <FormField
                         control={form.control}
                         name="startDate"
@@ -280,7 +258,6 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         )}
                     />
 
-                    {/* DUE DATE */}
                     <FormField
                         control={form.control}
                         name="dueDate"
@@ -300,7 +277,6 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         )}
                     />
 
-                    {/* ESTIMATE */}
                     <FormField
                         control={form.control}
                         name="estimate"
@@ -324,10 +300,8 @@ export default function CreateTaskForm({ projectId, onCreatedAction }: CreateTas
                         )}
                     />
 
-                    {/* ERROR */}
                     {error && <p className="text-red-500">{error}</p>}
 
-                    {/* SUBMIT */}
                     <Button type="submit" disabled={loading}>
                         {loading ? "Đang tạo..." : "Tạo Task"}
                     </Button>

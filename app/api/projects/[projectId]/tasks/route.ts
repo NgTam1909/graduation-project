@@ -31,14 +31,14 @@ export async function GET(
 
         const { projectId } = await params
         if (!projectId) {
-            return NextResponse.json({ message: "KhÃ´ng thá»¥c projectId" }, { status: 400 })
+            return NextResponse.json({ message: "Không thấy projectId" }, { status: 400 })
         }
 
         await connectDB()
 
         const project = await Project.findOne({ projectId })
         if (!project) {
-            return NextResponse.json({ message: "KhÃ´ng tÃ¬m tháº¥y dá»± Ã¡n" }, { status: 404 })
+            return NextResponse.json({ message: "Không tìm thấy dự án" }, { status: 404 })
         }
 
         const isMember =
@@ -63,7 +63,7 @@ export async function GET(
         })
     } catch {
         return NextResponse.json(
-            { message: "KhÃ´ng thá»ƒ láº¥y danh sÃ¡ch task" },
+            { message: "Không tìm thấy task" },
             { status: 500 }
         )
     }

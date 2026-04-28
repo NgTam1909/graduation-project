@@ -1,3 +1,4 @@
+import mongoose from "mongoose"
 
 export enum TaskStatus {
     BACKLOG = "backlog",
@@ -7,7 +8,7 @@ export enum TaskStatus {
     CANCELLED = "cancelled",
 }
 
-export enum ImportanceLevel {
+export enum PriorityLevel {
     NONE = "none",
     LOW = "low",
     MEDIUM = "medium",
@@ -16,6 +17,7 @@ export enum ImportanceLevel {
 export interface Task {
     id: string;
     projectId?: string;
+    parentId?: string;
     code: string;
     title: string;
     status: TaskStatus;
@@ -31,4 +33,18 @@ export interface Task {
     estimate?: number;
     createdAt?: string;
     updatedAt?: string;
+}
+export type LeanUser = {
+    _id: mongoose.Types.ObjectId
+    firstName?: string
+    lastName?: string
+    email?: string
+    position?: string | null
+    skills?: string[]
+}
+export type TaskSubtaskItem = {
+    id: string
+    status: string
+    code: string
+    assigneesText: string
 }

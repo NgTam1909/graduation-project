@@ -34,7 +34,9 @@ export default function LoginForm({
         e.preventDefault()
         handleSubmit()
     }
-
+    const isFormValid =
+        identifier.trim() !== "" &&
+        password.trim() !== ""
     return (
         <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
             <Card className="w-full max-w-sm sm:max-w-md rounded-2xl shadow-lg border">
@@ -48,11 +50,9 @@ export default function LoginForm({
                 </CardHeader>
 
                 <CardContent>
-                    {/* Bọc trong form */}
                     <form onSubmit={onSubmit} className="space-y-5">
-                        {/* Email / Username */}
                         <div className="space-y-2">
-                            <Label>Email hoặc Username</Label>
+                            <Label>Email </Label>
                             <Input
                                 value={identifier}
                                 onChange={(e) => setIdentifier(e.target.value)}
@@ -96,12 +96,10 @@ export default function LoginForm({
                             </p>
                         )}
 
-                        {/* Login Button - chuyển thành type="submit" */}
                         <Button
                             type="submit"
                             className="w-full h-11 rounded-xl"
-                            disabled={loading}
-                        >
+                            disabled={loading || !isFormValid}                        >
                             {loading ? "Đang đăng nhập..." : "Đăng nhập"}
                         </Button>
 

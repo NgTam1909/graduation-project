@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +17,26 @@ interface Props {
 }
 
 export function TaskCard({ task, draggable, onDragStart, onDragEnd }: Props) {
+    const router = useRouter()
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
+    const isOpen = searchParams.get("taskId") === task.id
+
+    const handleOpenChange = (open: boolean) => {
+        const params = new URLSearchParams(searchParams.toString())
+
+        if (open) {
+            params.set("taskId", task.id)
+        } else {
+            params.delete("taskId")
+        }
+
+        const query = params.toString()
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+    }
+
     return (
-        <Dialog>
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 <Card
                     className="mb-3 hover:shadow-md transition cursor-pointer"

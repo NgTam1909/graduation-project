@@ -1,15 +1,27 @@
-'use client'
 
 import {
     PieChart, Pie, Cell, Tooltip, ResponsiveContainer
 } from "recharts"
+const COLOR_MAP = {
+    backlog: "#fbbf24",      // Vàng nhạt
+    todo: "#60a5fa",         // Xanh dương nhạt
+    inprogress: "#a78bfa",   // Tím nhạt
+    done: "#34d399",         // Xanh lục nhạt
+    cancelled: "#cbd5e1",    // Xám lạnh
+}
 
-const COLORS = ["#3b82f6", "#f59e0b", "#22c55e", "#ef4444", "#94a3b8"]
+type PieItem = {
+    name: string
+    value: number
+}
 
 export default function ClickablePie({
                                          data,
                                          onClick
-                                     }: any) {
+                                     }: {
+    data: PieItem[]
+    onClick?: (name: string) => void
+}) {
     return (
         <ResponsiveContainer height={300}>
             <PieChart>
@@ -18,10 +30,16 @@ export default function ClickablePie({
                     dataKey="value"
                     nameKey="name"
                     outerRadius={100}
-                    onClick={(e) => onClick(e.name)}
+                    onClick={(e: any) => {
+                        const name = e?.name
+                        if (typeof name === "string") onClick?.(name)
+                    }}
                 >
-                    {data.map((_: any, i: number) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    {data.map((item, i) => (
+                        <Cell
+                            key={i}
+                            fill={COLOR_MAP[item.name as keyof typeof COLOR_MAP]}
+                        />
                     ))}
                 </Pie>
 

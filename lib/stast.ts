@@ -1,7 +1,9 @@
 import { Task } from "@/types/task"
+import { getTaskOverDue } from "@/lib/overDue"
 
 export function buildAdvancedStats(tasks: Task[] = []) {
   const now = new Date()
+
   let overdue = 0
 
   const statusCount = {
@@ -17,16 +19,11 @@ export function buildAdvancedStats(tasks: Task[] = []) {
   tasks.forEach((t) => {
     statusCount[t.status]++
 
-    if (
-      t.dueDate &&
-      new Date(t.dueDate) > now &&
-      t.status !== "done" &&
-      t.status !== "cancelled"
-    ) {
+    if (getTaskOverDue(t, now).isOverdue) {
       overdue++
     }
 
-    if (t.assignees && t.assignees.length > 0) {
+    if (t.assignees?.length) {
       t.assignees.forEach((name) => {
         userMap[name] = (userMap[name] || 0) + 1
       })
@@ -37,7 +34,7 @@ export function buildAdvancedStats(tasks: Task[] = []) {
     statusCount,
     overdue,
     userStats: Object.entries(userMap)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value),
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value),
   }
 }

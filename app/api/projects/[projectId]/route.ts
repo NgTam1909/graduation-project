@@ -5,6 +5,8 @@ import { connectDB } from "@/lib/db"
 import Project, { ProjectRole, IProjectMember } from "@/models/project.model"
 import { updateProjectSchema } from "@/lib/validations/project.validation"
 import ActivityLog, { ActivityAction } from "@/models/activityLog.model"
+import Task from "@/models/task.model"
+import ProjectInvite from "@/models/projectInvite.model"
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
 
@@ -53,14 +55,14 @@ export async function GET(
 
         const { projectId } = await params
         if (!projectId) {
-            return NextResponse.json({ message: "KhÃ´ng tháº¥y projectId" }, { status: 400 })
+            return NextResponse.json({ message: "Không thấy projectId" }, { status: 400 })
         }
 
         await connectDB()
 
         const project = await findProjectByParam(projectId)
         if (!project) {
-            return NextResponse.json({ message: "KhÃ´ng tÃ¬m tháº¥y dá»± Ã¡n" }, { status: 404 })
+            return NextResponse.json({ message: "Không tìm thấy dự án" }, { status: 404 })
         }
 
         const isMember =
@@ -79,7 +81,7 @@ export async function GET(
         })
     } catch {
         return NextResponse.json(
-            { message: "KhÃ´ng thá»ƒ láº¥y thÃ´ng tin dá»± Ã¡n" },
+            { message: "Không thể lấy thông tin dự án" },
             { status: 500 }
         )
     }
@@ -97,14 +99,14 @@ export async function PATCH(
 
         const { projectId } = await params
         if (!projectId) {
-            return NextResponse.json({ message: "KhÃ´ng tháº¥y projectId" }, { status: 400 })
+            return NextResponse.json({ message: "Không thấy projectId" }, { status: 400 })
         }
 
         const body = await req.json()
         const parsed = updateProjectSchema.safeParse(body)
         if (!parsed.success) {
             return NextResponse.json(
-                { message: "Dá»¯ liá»‡u khÃ´ng há»£p lá»‡", errors: parsed.error.flatten() },
+                { message: "Dữ liệu không hợp lệ", errors: parsed.error.flatten() },
                 { status: 400 }
             )
         }
@@ -113,7 +115,7 @@ export async function PATCH(
 
         const project = await findProjectByParam(projectId)
         if (!project) {
-            return NextResponse.json({ message: "KhÃ´ng tÃ¬m tháº¥y dá»± Ã¡n" }, { status: 404 })
+            return NextResponse.json({ message: "Không tìm thấy dự án" }, { status: 404 })
         }
 
         const role = getUserRole(project, userId)
@@ -159,7 +161,7 @@ export async function PATCH(
         })
     } catch {
         return NextResponse.json(
-            { message: "KhÃ´ng thá»ƒ cáº­p nháº­t dá»± Ã¡n" },
+            { message: "Không thấy cập nhật dự án" },
             { status: 500 }
         )
     }
@@ -193,6 +195,47 @@ export async function DELETE(
 
         if (!project.owner?.userId?.equals(userId)) {
             return NextResponse.json({ message: "Forbidden" }, { status: 403 })
+        }
+
+        const affectedUserIds = Array.from(
+            new Set(
+                [
+                    project.owner?.userId?.toString(),
+                    ...(project.members ?? []).map((member: IProjectMember) =>
+                        member.userId?.toString()
+                    ),
+                ].filter((value): value is string => !!value)
+            )
+        )
+
+// Xóa dữ liệu liên quan trước để tránh tài liệu không rõ nguồn gốc.
+// Giữ lại nhật ký kiểm toán DELETE_PROJECT bằng cách xóa các nhật ký hiện có trước khi tạo nhật ký mới.
+        await Promise.all([
+            Task.deleteMany({ projectId: project._id }),
+            ProjectInvite.deleteMany({ projectId: project._id }),
+            ActivityLog.deleteMany({ projectId: project._id }),
+        ])
+
+        try {
+            await ActivityLog.create({
+                userId: new mongoose.Types.ObjectId(userId),
+                projectId: project._id,
+                entityType: "Project",
+                entityId: project._id,
+                action: ActivityAction.DELETE_PROJECT,
+                oldValue: {
+                    title: project.title,
+                    description: project.description ?? "",
+                    isPublic: project.isPublic,
+                },
+                metadata: {
+                    projectId: project.projectId,
+                    projectTitle: project.title,
+                    affectedUserIds,
+                },
+            })
+        } catch {
+            // ignore audit log errors
         }
 
         await Project.deleteOne({ _id: project._id })

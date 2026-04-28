@@ -1,0 +1,291 @@
+import { NextRequest, NextResponse } from "next/server"
+import mongoose from "mongoose"
+import { jwtVerify } from "jose"
+import { connectDB } from "@/lib/db"
+import Task, { TaskStatus } from "@/models/task.model"
+import Project, { IProjectMember, ProjectRole } from "@/models/project.model"
+import { updateTaskSchema } from "@/lib/validations/task.validation"
+import ActivityLog, { ActivityAction } from "@/models/activityLog.model"
+
+const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
+
+async function getUserIdFromRequest(req: NextRequest) {
+    const token = req.cookies.get("accessToken")?.value
+    if (!token) return null
+
+    try {
+        const { payload } = await jwtVerify(token, SECRET)
+        const id = (payload.id || payload.userId) as string | undefined
+        return id ?? null
+    } catch {
+        return null
+    }
+}
+
+function toObjectId(id: string) {
+    return new mongoose.Types.ObjectId(id)
+}
+
+function normalizeValue(value: unknown): unknown {
+    if (value instanceof Date) return value.toISOString()
+    if (value instanceof mongoose.Types.ObjectId) return value.toString()
+    if (Array.isArray(value)) return value.map((item) => normalizeValue(item))
+    return value
+}
+
+const allowedStatusTransitions: Record<TaskStatus, TaskStatus[]> = {
+    [TaskStatus.BACKLOG]: [TaskStatus.TODO, TaskStatus.CANCELLED],
+    [TaskStatus.TODO]: [TaskStatus.IN_PROGRESS, TaskStatus.DONE, TaskStatus.CANCELLED],
+    [TaskStatus.IN_PROGRESS]: [TaskStatus.TODO, TaskStatus.DONE, TaskStatus.CANCELLED],
+    [TaskStatus.DONE]: [TaskStatus.TODO],
+    [TaskStatus.CANCELLED]: [TaskStatus.TODO],
+}
+
+function isValidStatusTransition(current: TaskStatus, next: TaskStatus) {
+    if (current === next) return true
+    return allowedStatusTransitions[current]?.includes(next) ?? false
+}
+
+export async function PATCH(
+    req: NextRequest,
+    { params }: { params: Promise<{ taskId: string }> }
+) {
+    try {
+        const userId = await getUserIdFromRequest(req)
+        if (!userId) {
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+        }
+
+        const { taskId } = await params
+        if (!taskId) {
+            return NextResponse.json({ message: "Thiếu taskId" }, { status: 400 })
+        }
+
+        const body = await req.json()
+        const parsed = updateTaskSchema.safeParse(body)
+        if (!parsed.success) {
+            return NextResponse.json(
+                { message: "Dữ liệu không hợp lệ", errors: parsed.error.flatten() },
+                { status: 400 }
+            )
+        }
+
+        await connectDB()
+
+        const task = await Task.findById(taskId)
+        if (!task) {
+            return NextResponse.json({ message: "Không tìm thấy task" }, { status: 404 })
+        }
+
+        const project = await Project.findById(task.projectId)
+        if (!project) {
+            return NextResponse.json({ message: "Không tìm thấy dự án" }, { status: 404 })
+        }
+
+        let currentRole: ProjectRole | null = null
+        if (project.owner?.userId?.toString() === userId) {
+            currentRole = project.owner.role
+        } else {
+            const member = project.members.find((m: IProjectMember) => m.userId?.toString() === userId)
+            currentRole = member?.role ?? null
+        }
+
+        if (!currentRole) {
+            return NextResponse.json({ message: "Forbidden" }, { status: 403 })
+        }
+
+        const data = parsed.data
+
+        // Subtask constraint: if parent is cancelled, children must remain cancelled.
+        if (task.parentId && data.status !== undefined) {
+            const parent = await Task.findById(task.parentId).select("status").lean()
+            if (parent?.status === TaskStatus.CANCELLED && data.status !== TaskStatus.CANCELLED) {
+                return NextResponse.json(
+                    { message: "Task cha đã cancelled, không thể đổi trạng thái task con" },
+                    { status: 400 }
+                )
+            }
+        }
+
+        if (data.assignees) {
+            const ownerId = project.owner.userId.toString()
+            const memberIds = project.members.map((m) => m.userId.toString())
+            const allIds = Array.from(new Set([ownerId, ...memberIds]))
+
+            let assignableIds: string[] = []
+            if (currentRole === ProjectRole.MEMBER) {
+                assignableIds = [userId]
+            } else if (currentRole === ProjectRole.LEADER) {
+                const memberOnlyIds = project.members
+                    .filter((m) => m.role === ProjectRole.MEMBER)
+                    .map((m) => m.userId.toString())
+                assignableIds = Array.from(new Set([userId, ...memberOnlyIds]))
+            } else {
+                assignableIds = allIds
+            }
+
+            const invalidAssignees = data.assignees.filter(
+                (assigneeId) => !assignableIds.includes(assigneeId)
+            )
+
+            if (invalidAssignees.length > 0) {
+                return NextResponse.json(
+                    { message: "Không có quyền gán người thực hiện này" },
+                    { status: 403 }
+                )
+            }
+        }
+
+        if (data.status !== undefined) {
+            const currentStatus = task.status as TaskStatus
+            const nextStatus = data.status as TaskStatus
+            if (!isValidStatusTransition(currentStatus, nextStatus)) {
+                return NextResponse.json(
+                    { message: "Chuyển trạng thái không hợp lệ" },
+                    { status: 400 }
+                )
+            }
+
+            // When parent is marked DONE: try to auto-mark subtasks DONE (except CANCELLED) if the transition is valid.
+            // Block only if there are remaining subtasks that cannot be moved to DONE.
+            if (nextStatus === TaskStatus.DONE) {
+                const children = await Task.find({ parentId: task._id })
+                    .select("_id status")
+                    .lean()
+
+                const blocking = children.filter((child) => {
+                    if (child.status === TaskStatus.DONE) return false
+                    if (child.status === TaskStatus.CANCELLED) return false
+                    return !isValidStatusTransition(child.status as TaskStatus, TaskStatus.DONE)
+                })
+
+                if (blocking.length > 0) {
+                    return NextResponse.json(
+                        {
+                            message:
+                                "Không thể done task cha: vẫn còn task con không thể chuyển thẳng sang done (ví dụ backlog). Hãy chuyển chúng sang todo/inprogress hoặc cancelled trước.",
+                        },
+                        { status: 400 }
+                    )
+                }
+
+                const toDoneIds = children
+                    .filter((child) => {
+                        if (child.status === TaskStatus.DONE) return false
+                        if (child.status === TaskStatus.CANCELLED) return false
+                        return isValidStatusTransition(child.status as TaskStatus, TaskStatus.DONE)
+                    })
+                    .map((child) => child._id)
+
+                if (toDoneIds.length > 0) {
+                    await Task.updateMany(
+                        { _id: { $in: toDoneIds } },
+                        { $set: { status: TaskStatus.DONE } }
+                    )
+                }
+            }
+
+            // If parent is CANCELLED, cascade CANCELLED to all subtasks.
+            if (nextStatus === TaskStatus.CANCELLED) {
+                await Task.updateMany(
+                    { parentId: task._id, status: { $ne: TaskStatus.CANCELLED } },
+                    { $set: { status: TaskStatus.CANCELLED } }
+                )
+            }
+            if (currentStatus === TaskStatus.BACKLOG && nextStatus === TaskStatus.TODO) {
+                const incomingAssignees = Array.isArray(data.assignees)
+                    ? data.assignees.length
+                    : undefined
+                const currentAssignees = Array.isArray(task.assignees)
+                    ? task.assignees.length
+                    : 0
+                const assigneeCount =
+                    incomingAssignees !== undefined ? incomingAssignees : currentAssignees
+                if (assigneeCount === 0) {
+                    return NextResponse.json(
+                        { message: "Cần gán assignee khi chuyển sang Todo" },
+                        { status: 400 }
+                    )
+                }
+            }
+        }
+
+        const updateData: Record<string, unknown> = {}
+
+        if (data.title !== undefined) updateData.title = data.title
+        if (data.description !== undefined) updateData.description = data.description
+        if (data.status !== undefined) updateData.status = data.status
+        if (data.priority !== undefined) updateData.priority = data.priority
+        if (data.labels !== undefined) updateData.labels = data.labels
+        if (data.estimate !== undefined) updateData.estimate = data.estimate
+        if (data.assignees !== undefined) {
+            updateData.assignees = data.assignees.map((id) => toObjectId(id))
+        }
+
+        if (data.startDate !== undefined) {
+            updateData.startDate =
+                data.startDate && data.startDate.trim().length > 0
+                    ? new Date(`${data.startDate}T00:00:00`)
+                    : null
+        }
+
+        if (data.dueDate !== undefined) {
+            updateData.dueDate =
+                data.dueDate && data.dueDate.trim().length > 0
+                    ? new Date(`${data.dueDate}T00:00:00`)
+                    : null
+        }
+
+        const oldValue: Record<string, unknown> = {}
+        const newValue: Record<string, unknown> = {}
+
+        for (const [key, rawNewValue] of Object.entries(updateData)) {
+            let oldFieldValue: unknown = (task as unknown as Record<string, unknown>)[key]
+            let newFieldValue: unknown = rawNewValue
+
+            if (key === "assignees") {
+                oldFieldValue = Array.isArray(task.assignees)
+                    ? task.assignees.map((id) => id.toString())
+                    : []
+                newFieldValue = Array.isArray(rawNewValue)
+                    ? (rawNewValue as mongoose.Types.ObjectId[]).map((id) => id.toString())
+                    : []
+            }
+
+            const normalizedOld = normalizeValue(oldFieldValue)
+            const normalizedNew = normalizeValue(newFieldValue)
+
+            if (JSON.stringify(normalizedOld) !== JSON.stringify(normalizedNew)) {
+                oldValue[key] = normalizedOld
+                newValue[key] = normalizedNew
+            }
+        }
+
+        await Task.updateOne({ _id: task._id }, { $set: updateData })
+
+        if (Object.keys(newValue).length > 0) {
+            try {
+                const isStatusOnly =
+                    Object.keys(newValue).length === 1 && newValue.status !== undefined
+
+                await ActivityLog.create({
+                    userId: new mongoose.Types.ObjectId(userId),
+                    projectId: project._id,
+                    entityType: "Task",
+                    entityId: task._id,
+                    action: isStatusOnly
+                        ? ActivityAction.UPDATE_TASK_STATUS
+                        : ActivityAction.UPDATE_TASK,
+                    oldValue,
+                    newValue,
+                })
+            } catch {
+                // ignore audit log errors
+            }
+        }
+
+        return NextResponse.json({ success: true })
+    } catch {
+        return NextResponse.json({ message: "Cập nhật task thất bại" }, { status: 500 })
+    }
+}
