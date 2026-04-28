@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import {Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
     Home,
     Plus,
@@ -32,12 +32,11 @@ import { MemberDialog } from "@/components/projects/member-project";
 import { useProjectList} from "@/hooks/useProjectList"
 import ProjectList from "@/components/projects/project-list";
 import {Project} from "@/types/project";
-
-export default function NavProjects() {
+function NavProjectsContent() {
     const nav = useProjectList()
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const [projects] = useState<Project[]>([]);
+    const projects = nav.projects;
     const [taskDialogProjectId, setTaskDialogProjectId] = useState<string | null>(null);
     const [taskDialogProjectTitle, setTaskDialogProjectTitle] = useState<string | null>(null);
     const [taskDialogParentId, setTaskDialogParentId] = useState<string | null>(null);
@@ -189,5 +188,12 @@ export default function NavProjects() {
                 </DialogContent>
             </Dialog>
         </SidebarContent>
+    );
+}
+export default function NavProjects() {
+    return (
+        <Suspense fallback={null}>
+            <NavProjectsContent />
+        </Suspense>
     );
 }

@@ -1,11 +1,12 @@
 "use client"
 
 import Link from "next/link"
+import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useSearch } from "@/hooks/useSearch"
 
-export default function SearchPage() {
+function SearchPageContent() {
     const params = useSearchParams()
     const q = (params.get("q") ?? "").trim()
     const { data, loading, error } = useSearch(q)
@@ -102,5 +103,13 @@ export default function SearchPage() {
                 </div>
             )}
         </div>
+    )
+}
+
+export default function SearchPage() {
+    return (
+        <Suspense fallback={<div className="p-4 text-sm">Đang tải...</div>}>
+            <SearchPageContent />
+        </Suspense>
     )
 }

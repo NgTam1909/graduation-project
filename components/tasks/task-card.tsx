@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar } from "lucide-react";
 import { Task } from "@/types/task";
 import { TaskDetail } from "./task-detail";
+import { Suspense } from "react";
 
 interface Props {
     task: Task;
@@ -16,7 +17,7 @@ interface Props {
     onDragEnd?: (task: Task, event: React.DragEvent<HTMLDivElement>) => void;
 }
 
-export function TaskCard({ task, draggable, onDragStart, onDragEnd }: Props) {
+function TaskCardContent({ task, draggable, onDragStart, onDragEnd }: Props) {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -99,4 +100,11 @@ export function TaskCard({ task, draggable, onDragStart, onDragEnd }: Props) {
             </DialogContent>
         </Dialog>
     );
+}
+export function TaskCard(props: Props) {
+    return (
+        <Suspense fallback={null}>
+            <TaskCardContent {...props} />
+        </Suspense>
+    )
 }

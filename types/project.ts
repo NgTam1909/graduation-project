@@ -43,3 +43,23 @@ export type Project = {
     projectId: string
     isPublic: boolean
 }
+export type InviteInfo = {
+    projectTitle: string;
+    projectId: string;
+    email: string;
+    expiresAt: string;
+};
+
+
+export type ProjectDetail = {
+    title: string
+    description?: string
+    isPublic: boolean
+}
+export type ProjectMember = {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    isOwner: boolean;
+};

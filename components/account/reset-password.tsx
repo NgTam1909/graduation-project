@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import React, {Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, Eye, EyeOff, Loader2, CheckCircle2, Save } from 'lucide-react';
 import { POST_METHOD } from '@/lib/req';
@@ -13,7 +12,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-export function ResetPasswordForm() {
+export function ResetPasswordFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -108,5 +107,12 @@ export function ResetPasswordForm() {
         </form>
       </CardContent>
     </Card>
+  );
+}
+export function ResetPasswordForm() {
+  return (
+      <Suspense fallback={<div>Loading...</div>}>
+        <ResetPasswordFormContent />
+      </Suspense>
   );
 }

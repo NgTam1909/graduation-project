@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { GET_METHOD, POST_METHOD } from "@/lib/req";
-import type {JoinInfo} from "@/types/project"
+import {JoinInfo} from "@/types/project"
 
 
 export default function ProjectJoinPage() {

@@ -5,13 +5,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { GET_METHOD, POST_METHOD } from "@/lib/req";
+import { InviteInfo } from "@/types/project"
 
-type InviteInfo = {
-    projectTitle: string;
-    projectId: string;
-    email: string;
-    expiresAt: string;
-};
 
 export default function InvitePage() {
     const params = useParams<{ token: string }>();

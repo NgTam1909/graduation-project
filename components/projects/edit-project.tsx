@@ -23,16 +23,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { GET_METHOD, PATCH_METHOD } from "@/lib/req"
+import {ProjectDetail} from "@/types/project";
 
 type EditProjectProps = {
     projectId: string
     onSuccessAction?: () => void
-}
-
-type ProjectDetail = {
-    title: string
-    description?: string
-    isPublic: boolean
 }
 
 export default function EditProject({ projectId, onSuccessAction }: EditProjectProps) {
