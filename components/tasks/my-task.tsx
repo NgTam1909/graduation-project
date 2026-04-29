@@ -128,43 +128,30 @@ export function MyTasks() {
   }
 
   return (
-      <section className="w-full px-4 py-10">
-        <div className="min-w-[900px] border border-black">
-          <div className="grid grid-cols-[160px_1fr_160px_180px_160px] border-b border-black bg-white">
-            <div className="px-5 py-4 text-sm font-bold uppercase tracking-wide">
-              ID
+      <section className="w-full  py-10">
+        <div className="w-full overflow-x-auto">
+          {/* Bảng - hiển thị trên mọi kích thước, TaskRow tự xử lý responsive bên trong */}
+          <div >
+            {/* HEADER - chỉ hiện trên desktop (sm trở lên) */}
+            <div className="hidden sm:grid grid-cols-[160px_1fr_160px_180px_160px] border-b border-black bg-white">
+              <div className="px-5 py-4 text-sm font-bold uppercase tracking-wide">ID</div>
+              <div className="px-5 py-4 text-sm font-bold tracking-wide">Nội dung công việc</div>
+              <div className="px-5 py-4 text-sm font-bold tracking-wide">Thời hạn</div>
+              <div className="px-5 py-4 text-sm font-bold tracking-wide">Độ ưu tiên</div>
+              <div className="px-5 py-4 text-sm font-bold tracking-wide">Trạng thái</div>
             </div>
 
-            <div className="px-5 py-4 text-sm font-bold tracking-wide">
-              Nội dung công việc
-            </div>
-
-            <div className="px-5 py-4 text-sm font-bold tracking-wide">
-              Thời hạn
-            </div>
-
-            <div className="px-5 py-4 text-sm font-bold tracking-wide">
-              Độ ưu tiên
-            </div>
-
-            <div className="px-5 py-4 text-sm font-bold tracking-wide">
-              Trạng thái
-            </div>
+            {/* Nội dung - TaskRow tự xử lý mobile/desktop */}
+            {error ? (
+                <div className="px-5 py-6 text-sm text-red-600">{error}</div>
+            ) : sortedTasks.length === 0 ? (
+                <div className="px-5 py-10 text-sm text-muted-foreground">
+                  Không có công việc nào
+                </div>
+            ) : (
+                sortedTasks.map((task) => <TaskRow key={task.id} task={task} />)
+            )}
           </div>
-
-          {error ? (
-              <div className="px-5 py-6 text-sm text-red-600">
-                {error}
-              </div>
-          ) : sortedTasks.length === 0 ? (
-              <div className="px-5 py-10 text-sm text-muted-foreground">
-                Không có công việc nào
-              </div>
-          ) : (
-              sortedTasks.map((task) => (
-                  <TaskRow key={task.id} task={task} />
-              ))
-          )}
         </div>
       </section>
   )

@@ -41,7 +41,7 @@ export default function DashboardLayout({
                 {/* NAV TOP */}
                 <DashboardHeader />
 
-                <div className="flex w-full flex-1 gap-6 px-4 py-6">
+                <div className="flex w-full flex-1 gap-6 px-3 sm:px-4 py-6">
                     {/* LEFT */}
                     <ResponsiveNavProjects />
 

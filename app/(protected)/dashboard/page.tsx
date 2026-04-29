@@ -41,7 +41,9 @@ async function getCurrentUsername() {
 
 export default async function DashboardPage() {
     const now = new Date()
-    const hour = now.getHours()
+    const hour = new Date(
+        now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+    ).getHours()
     const username = (await getCurrentUsername()) ?? "bạn"
     const greeting =
         hour < 4
@@ -66,11 +68,10 @@ export default async function DashboardPage() {
     })
 
     return (
-
-        <div className="p-4 sm:p-6 lg:p-10 space-y-10">
+        <div className="w-full px-3 sm:px-6 lg:px-10 space-y-10 overflow-x-hidden">
 
             {/* Header */}
-            <div className="space-y-1 text-center">
+            <div className="space-y-1 text-center ">
                 <h1 className="text-2xl sm:text-3xl font-bold">
                     {greeting}, {username}
                 </h1>

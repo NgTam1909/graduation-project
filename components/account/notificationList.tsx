@@ -1,6 +1,5 @@
 "use client"
 
-import { ArrowRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { NotificationItem } from "@/types/notification"
@@ -162,7 +161,7 @@ export default function NotificationList({
                             <div
                                 key={notification.id}
                                 className={cn(
-                                    "rounded-md px-2 py-2 text-sm hover:bg-accent",
+                                    "rounded-md px-6 py-2 text-sm hover:bg-accent",
                                     notification.entityType === "Task" &&
                                     notification.entityId
                                         ? "cursor-pointer"
@@ -210,15 +209,15 @@ export default function NotificationList({
                                             <div
                                                 key={`${notification.id}-${change.key}`}
                                             >
-                                                <span className="font-medium text-foreground/80">
-                                                    {change.label}:
-                                                </span>{" "}
-                                                {change.from}{" "}
-                                                <ArrowRight
-                                                    size={12}
-                                                    className="inline text-muted-foreground"
-                                                />{" "}
-                                                {change.to}
+                                                {/*<span className="font-medium text-foreground/80">*/}
+                                                {/*    {change.label}:*/}
+                                                {/*</span>{" "}*/}
+                                                {/*{change.from}{" "}*/}
+                                                {/*<ArrowRight*/}
+                                                {/*    size={12}*/}
+                                                {/*    className="inline text-muted-foreground"*/}
+                                                {/*/>{" "}*/}
+                                                {/*{change.to}*/}
                                             </div>
                                         ))}
                                     </div>

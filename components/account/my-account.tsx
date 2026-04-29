@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import UpdateProfileDialog from "@/components/account/updateProfile"
 import { Briefcase, Mail, MapPin, Phone, User } from "lucide-react"
-import {IUser} from "@/types/user";
+import { IUser } from "@/types/user"
 
 interface UserProfileProps {
     user: IUser
@@ -82,29 +82,37 @@ export default function UserProfile({ user, isEditable = false, onSave }: UserPr
     }
 
     return (
-        <div className="container mx-auto max-w-5xl p-6">
-            <Card>
+        <div className="container mx-auto max-w-5xl p-3 sm:p-6">
+            <Card className="overflow-hidden">
+                {/* ✅ Header responsive stack */}
                 <CardHeader>
-                    <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-4">
-                            <Avatar className="h-20 w-20">
-                                <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        {/* Avatar + info - responsive */}
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
+                            {/* Avatar responsive size */}
+                            <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
+                                <AvatarFallback className="text-lg sm:text-2xl bg-primary text-primary-foreground">
                                     {getInitials()}
                                 </AvatarFallback>
                             </Avatar>
+
                             <div>
-                                <CardTitle className="text-2xl">{getFullName()}</CardTitle>
-                                <CardDescription className="flex items-center gap-2 mt-1">
-                                    <Mail className="h-4 w-4" />
-                                    {user.email}
+                                <CardTitle className="text-xl sm:text-2xl break-words">
+                                    {getFullName()}
+                                </CardTitle>
+                                <CardDescription className="flex items-center justify-center sm:justify-start gap-1 sm:gap-2 mt-1 text-xs sm:text-sm">
+                                    <Mail className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                    <span className="break-all">{user.email}</span>
                                 </CardDescription>
                                 {user.isGod && (
-                                    <Badge variant="destructive" className="mt-2">
+                                    <Badge variant="destructive" className="mt-1 sm:mt-2 text-xs">
                                         Super Admin
                                     </Badge>
                                 )}
                             </div>
                         </div>
+
+                        {/* Edit button */}
                         {isEditable && (
                             <Button
                                 onClick={() => {
@@ -115,8 +123,10 @@ export default function UserProfile({ user, isEditable = false, onSave }: UserPr
                                 }}
                                 variant="outline"
                                 disabled={!onSave}
+                                size="sm"
+                                className="w-full sm:w-auto"
                             >
-                                <User className="mr-2 h-4 w-4" />
+                                <User className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                                 Chỉnh sửa
                             </Button>
                         )}
@@ -125,64 +135,74 @@ export default function UserProfile({ user, isEditable = false, onSave }: UserPr
 
                 <Separator />
 
-                <CardContent className="pt-6">
+                <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
+                    {/* ✅ Tabs responsive - tránh bị dồn */}
                     <Tabs defaultValue="info" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="info">Thông tin cá nhân</TabsTrigger>
-                            <TabsTrigger value="skills">Vị trí và kỹ năng</TabsTrigger>
-                            <TabsTrigger value="address">Địa chỉ</TabsTrigger>
+                        <TabsList className="grid w-full grid-cols-3 h-auto p-1 mb-4 sm:mb-6">
+                            <TabsTrigger value={"info"} className="text-xs sm:text-sm py-1.5 sm:py-2">
+                                Thông tin cá nhân
+                            </TabsTrigger>
+                            <TabsTrigger value={"skills"} className="text-xs sm:text-sm py-1.5 sm:py-2">
+                                Vị trí và kỹ năng
+                            </TabsTrigger>
+                            <TabsTrigger value="address" className="text-xs sm:text-sm py-1.5 sm:py-2">
+                                Địa chỉ
+                            </TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="info" className="space-y-4 pt-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="firstName">Họ</Label>
-                                    <div className="text-sm">{user.lastName}</div>
+                        {/* ✅ Info tab - 1 cột trên mobile, 2 cột trên tablet/desktop */}
+                        <TabsContent value="info" className="space-y-3 sm:space-y-4 pt-3 sm:pt-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                <div className="space-y-1 sm:space-y-2">
+                                    <Label className="text-xs sm:text-sm">Họ</Label>
+                                    <div className="text-sm sm:text-base break-words">{user.lastName}</div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="lastName">Tên</Label>
-                                    <div className="text-sm">{user.firstName}</div>
+                                <div className="space-y-1 sm:space-y-2">
+                                    <Label className="text-xs sm:text-sm">Tên</Label>
+                                    <div className="text-sm sm:text-base break-words">{user.firstName}</div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="phone">Số điện thoại</Label>
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <Phone className="h-4 w-4 text-muted-foreground" />
-                                        {user.phone}
+                                <div className="space-y-1 sm:space-y-2">
+                                    <Label className="text-xs sm:text-sm">Số điện thoại</Label>
+                                    <div className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
+                                        <Phone className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                                        <span className="break-all">{user.phone}</span>
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <Mail className="h-4 w-4 text-muted-foreground" />
-                                        {user.email}
+                                <div className="space-y-1 sm:space-y-2">
+                                    <Label className="text-xs sm:text-sm">Email</Label>
+                                    <div className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
+                                        <Mail className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                                        <span className="break-all">{user.email}</span>
                                     </div>
                                 </div>
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="skills" className="space-y-4 pt-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="position">Vị trí</Label>
-                                <div className="flex items-center gap-2 text-sm">
-                                    <Briefcase className="h-4 w-4 text-muted-foreground" />
-                                    {user.position || "Chưa cập nhật"}
+                        {/* ✅ Skills tab */}
+                        <TabsContent value="skills" className="space-y-3 sm:space-y-4 pt-3 sm:pt-4">
+                            <div className="space-y-1 sm:space-y-2">
+                                <Label className="text-xs sm:text-sm">Vị trí</Label>
+                                <div className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
+                                    <Briefcase className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                                    <span>{user.position || "Chưa cập nhật"}</span>
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="skills">Kỹ năng</Label>
-                                <div className="flex flex-wrap gap-2">
+                            <div className="space-y-1 sm:space-y-2">
+                                <Label className="text-xs sm:text-sm">Kỹ năng</Label>
+                                {/* ✅ Skills badge wrap tốt, không tràn */}
+                                <div className="flex flex-wrap gap-1.5 sm:gap-2 max-w-full">
                                     {user.skills.length > 0 ? (
                                         user.skills.map((skill, index) => (
-                                            <Badge key={index} variant="secondary">
+                                            <Badge key={index} variant="secondary" className="text-xs">
                                                 {skill}
                                             </Badge>
                                         ))
                                     ) : (
-                                        <span className="text-sm text-muted-foreground">
+                                        <span className="text-xs sm:text-sm text-muted-foreground">
                                             Chưa có kỹ năng
                                         </span>
                                     )}
@@ -190,17 +210,18 @@ export default function UserProfile({ user, isEditable = false, onSave }: UserPr
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="address" className="space-y-4 pt-4">
+                        {/* ✅ Address tab - responsive layout */}
+                        <TabsContent value="address" className="space-y-3 sm:space-y-4 pt-3 sm:pt-4">
                             {user.address && user.address.length > 0 ? (
                                 user.address.map((addr) => (
-                                    <Card key={addr._id}>
-                                        <CardContent className="pt-4">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex items-start gap-2">
-                                                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                                    <div>
-                                                        <p className="text-sm">{addr.street}</p>
-                                                        <p className="text-sm text-muted-foreground">
+                                    <Card key={addr._id} className="overflow-hidden">
+                                        <CardContent className="p-3 sm:p-4">
+                                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                                                <div className="flex items-start gap-2 min-w-0">
+                                                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm sm:text-base break-words">{addr.street}</p>
+                                                        <p className="text-xs sm:text-sm text-muted-foreground break-words">
                                                             {addr.city}
                                                         </p>
                                                     </div>
@@ -210,9 +231,9 @@ export default function UserProfile({ user, isEditable = false, onSave }: UserPr
                                     </Card>
                                 ))
                             ) : (
-                                <div className="text-center py-8 text-muted-foreground">
-                                    <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                    <p>Chưa có địa chỉ</p>
+                                <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                                    <MapPin className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm sm:text-base">Chưa có địa chỉ</p>
                                 </div>
                             )}
                         </TabsContent>

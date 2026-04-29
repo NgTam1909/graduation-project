@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 
 type Props = {
     title?: string
@@ -46,94 +47,131 @@ type Props = {
 export default function UpdateProfileDialog(props: Props) {
     return (
         <Dialog open={props.open} onOpenChange={props.onOpenChangeAction}>
-            <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>Cập nhật thông tin cá nhân</DialogTitle>
+            <DialogContent
+                className={cn(
+                    "w-[calc(100%-1rem)] sm:w-full sm:max-w-lg md:max-w-xl",
+                    "rounded-lg p-4 sm:p-6",
+                    "max-h-[90vh] sm:max-h-[85vh]",
+                    "flex flex-col overflow-hidden"
+                )}
+            >
+                <DialogHeader className="flex-shrink-0 pb-2 sm:pb-4">
+                    <DialogTitle className="text-lg sm:text-xl">
+                        Cập nhật thông tin cá nhân
+                    </DialogTitle>
                 </DialogHeader>
 
                 {props.profileLoading ? (
-                    <div className="text-sm text-muted-foreground">Đang tải...</div>
+                    <div className="flex items-center justify-center py-8 sm:py-12 flex-1">
+                        <div className="text-sm text-muted-foreground">Đang tải...</div>
+                    </div>
                 ) : (
-                    <div className="space-y-4">
-                        <div className="space-y-1">
-                            <div className="text-sm font-medium">
+                    <div className="flex-1 overflow-y-auto px-1 space-y-4 sm:space-y-5">
+                        {/* Thông tin tài khoản */}
+                        <div className="space-y-1 pb-2 border-b border-gray-100">
+                            <div className="text-base sm:text-lg font-semibold break-words">
                                 {props.profileName || "Tài khoản"}
                             </div>
                             {props.profileEmail && (
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs sm:text-sm text-muted-foreground break-all">
                                     {props.profileEmail}
                                 </div>
                             )}
                         </div>
 
-                        {props.setLastNameValueAction && (
-                            <div className="space-y-2">
-                                <Label>Họ</Label>
-                                <Input
-                                    value={props.lastNameValue ?? ""}
-                                    onChange={(e) => props.setLastNameValueAction?.(e.target.value)}
-                                />
-                            </div>
-                        )}
+                        {/* Form 2 cột trên màn hình lớn */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                            {props.setLastNameValueAction && (
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Họ</Label>
+                                    <Input
+                                        value={props.lastNameValue ?? ""}
+                                        onChange={(e) => props.setLastNameValueAction?.(e.target.value)}
+                                        className="w-full"
+                                        placeholder="Nhập họ"
+                                    />
+                                </div>
+                            )}
 
-                        {props.setFirstNameValueAction && (
-                            <div className="space-y-2">
-                                <Label>Tên</Label>
-                                <Input
-                                    value={props.firstNameValue ?? ""}
-                                    onChange={(e) => props.setFirstNameValueAction?.(e.target.value)}
-                                />
-                            </div>
-                        )}
+                            {props.setFirstNameValueAction && (
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Tên</Label>
+                                    <Input
+                                        value={props.firstNameValue ?? ""}
+                                        onChange={(e) => props.setFirstNameValueAction?.(e.target.value)}
+                                        className="w-full"
+                                        placeholder="Nhập tên"
+                                    />
+                                </div>
+                            )}
+                        </div>
 
+                        {/* Số điện thoại */}
                         {props.setPhoneValueAction && (
                             <div className="space-y-2">
-                                <Label>Số điện thoại</Label>
+                                <Label className="text-sm font-medium">Số điện thoại</Label>
                                 <Input
                                     value={props.phoneValue ?? ""}
                                     onChange={(e) => props.setPhoneValueAction?.(e.target.value)}
+                                    className="w-full"
+                                    placeholder="Nhập số điện thoại"
+                                    type="tel"
                                 />
                             </div>
                         )}
 
-                        <div className="space-y-2">
-                            <Label>Vị trí</Label>
-                            <Input
-                                value={props.positionValue}
-                                onChange={(e) => props.setPositionValueAction(e.target.value)}
-                            />
+                        {/* Vị trí và Kỹ năng */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium">Vị trí</Label>
+                                <Input
+                                    value={props.positionValue}
+                                    onChange={(e) => props.setPositionValueAction(e.target.value)}
+                                    className="w-full"
+                                    placeholder="Nhập vị trí công việc"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium">Kỹ năng</Label>
+                                <Input
+                                    value={props.skillsValue}
+                                    onChange={(e) => props.setSkillsValueAction(e.target.value)}
+                                    className="w-full"
+                                    placeholder="Nhập kỹ năng"
+                                />
+                            </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label>Kỹ năng</Label>
-                            <Input
-                                value={props.skillsValue}
-                                onChange={(e) => props.setSkillsValueAction(e.target.value)}
-                            />
-                        </div>
-
+                        {/* Thông báo */}
                         {props.profileError && (
-                            <div className="text-xs text-red-500">{props.profileError}</div>
+                            <div className="text-xs sm:text-sm text-red-500 bg-red-50 rounded-md p-2 sm:p-3 break-words">
+                                {props.profileError}
+                            </div>
                         )}
                         {props.profileSuccess && (
-                            <div className="text-xs text-green-600">{props.profileSuccess}</div>
+                            <div className="text-xs sm:text-sm text-green-600 bg-green-50 rounded-md p-2 sm:p-3 break-words">
+                                {props.profileSuccess}
+                            </div>
                         )}
                     </div>
                 )}
 
-                <DialogFooter>
+                <DialogFooter className="flex-shrink-0 flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-gray-100">
                     <Button
                         variant="secondary"
                         onClick={() => props.onOpenChangeAction(false)}
                         disabled={props.profileSaving}
+                        className="w-full sm:w-auto"
                     >
                         Đóng
                     </Button>
                     <Button
                         onClick={props.onSaveAction}
                         disabled={props.profileLoading || props.profileSaving}
+                        className="w-full sm:w-auto"
                     >
-                        {props.profileSaving ? "Đang lưu..." : "Lưu"}
+                        {props.profileSaving ? "Đang lưu..." : "Lưu thay đổi"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

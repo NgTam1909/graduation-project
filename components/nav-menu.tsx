@@ -67,7 +67,7 @@ export default function NavMenu({ onToggleSidebarAction, className }: NavMenuPro
                         </Button>
                     )}
 
-                    <div className="relative w-80">
+                    <div className="hidden sm:block relative w-full max-w-sm">
                         <Search className="absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Search user / project / task"
@@ -145,7 +145,23 @@ export default function NavMenu({ onToggleSidebarAction, className }: NavMenuPro
                     )}
                 </div>
             </div>
-
+            <div className="sm:hidden px-3 pb-2">
+                <div className="relative w-full">
+                    <Search className="absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                        placeholder="Search..."
+                        className="w-full pl-8 pr-4"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key !== "Enter") return
+                            const q = searchQuery.trim()
+                            if (!q) return
+                            router.push(`/search?q=${encodeURIComponent(q)}`)
+                        }}
+                    />
+                </div>
+            </div>
         </nav>
     )
 }
