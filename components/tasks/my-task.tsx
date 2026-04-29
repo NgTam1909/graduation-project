@@ -133,7 +133,7 @@ export function MyTasks() {
           {/* Bảng - hiển thị trên mọi kích thước, TaskRow tự xử lý responsive bên trong */}
           <div >
             {/* HEADER - chỉ hiện trên desktop (sm trở lên) */}
-            <div className="hidden sm:grid grid-cols-[160px_1fr_160px_180px_160px] border-b border-black bg-white">
+            <div className="hidden sm:grid grid-cols-[160px_1fr_160px_180px_160px] border-b border-black ">
               <div className="px-5 py-4 text-sm font-bold uppercase tracking-wide">ID</div>
               <div className="px-5 py-4 text-sm font-bold tracking-wide">Nội dung công việc</div>
               <div className="px-5 py-4 text-sm font-bold tracking-wide">Thời hạn</div>
