@@ -1,8 +1,6 @@
+// app/register/page.tsx (hoặc components/RegisterForm.tsx)
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -12,98 +10,25 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { RegisterFormData } from "@/hooks/useRegister"
-import { POST_METHOD } from "@/lib/req"
+import { Eye, EyeOff } from "lucide-react"
+import {useRegisterForm} from "@/hooks/useRegister";
 
 export default function RegisterForm() {
-    const router = useRouter()
+    const {
+        form,
+        loading,
+        error,
+        success,
+        fieldErrors,
+        showPassword,
+        showConfirmPassword,
+        handleChange,
+        handleSubmit,
+        toggleShowPassword,
+        toggleShowConfirmPassword,
+        isFormValid,
+    } = useRegisterForm()
 
-    const [showPassword, setShowPassword] = useState(false)
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-
-    const [form, setForm] = useState<RegisterFormData>({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        password: "",
-        confirmPassword: "",
-    })
-
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-    const [success, setSuccess] = useState<string | null>(null)
-    const [fieldErrors, setFieldErrors] = useState<
-        Partial<Record<keyof RegisterFormData, string>>
-    >({})
-
-    const handleChange = (field: keyof RegisterFormData, value: string) => {
-        setForm((prev) => ({ ...prev, [field]: value }))
-    }
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault()
-        setError(null)
-        setSuccess(null)
-
-        setFieldErrors({})
-        if (form.password !== form.confirmPassword) {
-            const message = "Mật khẩu xác nhận không đúng!"
-            setFieldErrors((prev) => ({ ...prev, confirmPassword: message }))
-            setError(message)
-            return
-        }
-
-        try {
-            setLoading(true)
-            await POST_METHOD("/api/auth/register", form)
-
-            setSuccess("Đăng ký thành công! Đang chuyển sang trang đăng nhập ...")
-
-            setTimeout(() => {
-                router.push("/login")
-            }, 1500)
-
-        } catch (err: unknown) {
-            const payload = (err as { response?: { data?: unknown } })?.response?.data as
-                | {
-                      message?: string
-                      errors?: Partial<Record<keyof RegisterFormData, string[]>>
-                  }
-                | undefined
-
-            const serverErrors = payload?.errors
-
-            if (serverErrors) {
-                const nextFieldErrors: Partial<Record<keyof RegisterFormData, string>> = {}
-                let firstMessage: string | undefined
-
-                for (const [field, messages] of Object.entries(serverErrors)) {
-                    if (messages && messages.length > 0) {
-                        const message = messages[0]
-                        nextFieldErrors[field as keyof RegisterFormData] = message
-                        if (!firstMessage) {
-                            firstMessage = message
-                        }
-                    }
-                }
-
-                setFieldErrors(nextFieldErrors)
-                setError(firstMessage || payload?.message || "Đăng ký thất bại!")
-            } else {
-                setError(payload?.message || "Đăng ký thất bại!")
-            }
-        } finally {
-            setLoading(false)
-        }
-    }
-    const isFormValid =
-        form.firstName.trim() &&
-        form.lastName.trim() &&
-        form.email.trim() &&
-        form.phone.trim() &&
-        form.password.trim() &&
-        form.confirmPassword.trim()
     return (
         <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
             <Card className="w-full max-w-md shadow-xl border-0 rounded-2xl">
@@ -115,6 +40,7 @@ export default function RegisterForm() {
 
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-5">
+                        {/* Họ */}
                         <div className="space-y-2">
                             <Label>Họ</Label>
                             <Input
@@ -126,6 +52,8 @@ export default function RegisterForm() {
                                 <p className="text-xs text-red-500">{fieldErrors.lastName}</p>
                             )}
                         </div>
+
+                        {/* Tên */}
                         <div className="space-y-2">
                             <Label>Tên</Label>
                             <Input
@@ -137,6 +65,8 @@ export default function RegisterForm() {
                                 <p className="text-xs text-red-500">{fieldErrors.firstName}</p>
                             )}
                         </div>
+
+                        {/* Email */}
                         <div className="space-y-2">
                             <Label>Email</Label>
                             <Input
@@ -149,6 +79,8 @@ export default function RegisterForm() {
                                 <p className="text-xs text-red-500">{fieldErrors.email}</p>
                             )}
                         </div>
+
+                        {/* Số điện thoại */}
                         <div className="space-y-2">
                             <Label>Số điện thoại</Label>
                             <Input
@@ -163,6 +95,8 @@ export default function RegisterForm() {
                                 <p className="text-xs text-red-500">{fieldErrors.phone}</p>
                             )}
                         </div>
+
+                        {/* Mật khẩu */}
                         <div className="space-y-2 relative">
                             <Label>Mật khẩu</Label>
                             <Input
@@ -173,7 +107,7 @@ export default function RegisterForm() {
                             />
                             <button
                                 type="button"
-                                onClick={() => setShowPassword(!showPassword)}
+                                onClick={toggleShowPassword}
                                 className="absolute right-3 top-9 text-muted-foreground"
                             >
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -182,33 +116,28 @@ export default function RegisterForm() {
                                 <p className="text-xs text-red-500">{fieldErrors.password}</p>
                             )}
                         </div>
+
+                        {/* Xác nhận mật khẩu */}
                         <div className="space-y-2 relative">
                             <Label>Xác nhận mật khẩu</Label>
                             <Input
                                 type={showConfirmPassword ? "text" : "password"}
                                 value={form.confirmPassword}
-                                onChange={(e) =>
-                                    handleChange("confirmPassword", e.target.value)
-                                }
+                                onChange={(e) => handleChange("confirmPassword", e.target.value)}
                                 placeholder="Nhập lại mật khẩu"
                             />
                             <button
                                 type="button"
-                                onClick={() =>
-                                    setShowConfirmPassword(!showConfirmPassword)
-                                }
+                                onClick={toggleShowConfirmPassword}
                                 className="absolute right-3 top-9 text-muted-foreground"
                             >
-                                {showConfirmPassword ? (
-                                    <EyeOff size={18} />
-                                ) : (
-                                    <Eye size={18} />
-                                )}
+                                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                             {fieldErrors.confirmPassword && (
                                 <p className="text-xs text-red-500">{fieldErrors.confirmPassword}</p>
                             )}
                         </div>
+
                         {error && (
                             <p className="text-sm text-red-500 text-center">{error}</p>
                         )}

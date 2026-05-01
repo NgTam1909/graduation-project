@@ -1,11 +1,6 @@
+// CreateTaskForm.tsx
 "use client"
 
-import { useEffect, useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { createTaskSchema, CreateTaskInput } from "@/lib/validations/task.validation"
-import { useCreateTask } from "@/hooks/useCreateTask"
-import { getTaskAssignees } from "@/services/task.service"
 import {
     Form,
     FormControl,
@@ -25,7 +20,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { PriorityLevel, TaskStatus } from "@/types/task"
-import type { AssigneeOption, AssigneeResponse } from "@/types/task-detail"
+import { useCreateTask } from "@/hooks/useCreateTask"
 
 type CreateTaskFormProps = {
     projectId: string
@@ -34,109 +29,20 @@ type CreateTaskFormProps = {
 }
 
 export default function CreateTaskForm({
-    projectId,
-    parentId,
-    onCreatedAction,
-}: CreateTaskFormProps) {
-    const { createTask, loading, error } = useCreateTask()
-    const today = new Date().toISOString().slice(0, 10)
-    const [assigneeOptions, setAssigneeOptions] = useState<AssigneeOption[]>([])
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-    const [currentUserRole, setCurrentUserRole] = useState<AssigneeResponse["currentUserRole"] | null>(null)
-
-    const form = useForm<CreateTaskInput>({
-        resolver: zodResolver(createTaskSchema),
-        defaultValues: {
-            title: "",
-            description: "",
-            status: TaskStatus.BACKLOG,
-            priority: PriorityLevel.NONE,
-            projectId,
-            parentId,
-            startDate: "",
-            dueDate: "",
-            estimate: undefined,
-            assignees: [],
-        },
+                                           projectId,
+                                           parentId,
+                                           onCreatedAction,
+                                       }: CreateTaskFormProps) {
+    const { form, loading, error, assigneeOptions, canAssignOthers, onSubmit } = useCreateTask({
+        projectId,
+        parentId,
+        onSuccess: onCreatedAction,
     })
 
-    useEffect(() => {
-        form.setValue("projectId", projectId, {
-            shouldValidate: false,
-            shouldDirty: false,
-        })
-        form.setValue("parentId", parentId, {
-            shouldValidate: false,
-            shouldDirty: false,
-        })
-    }, [form, parentId, projectId])
-
-    useEffect(() => {
-        let active = true
-
-        const load = async () => {
-            try {
-                const data = await getTaskAssignees(projectId)
-                if (!active) return
-                setAssigneeOptions(Array.isArray(data.assignees) ? data.assignees : [])
-                setCurrentUserId(data.currentUserId)
-                setCurrentUserRole(data.currentUserRole)
-
-                if (data.currentUserRole === "Member" && data.currentUserId) {
-                    form.setValue("assignees", [data.currentUserId], {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                    })
-                } else {
-                    form.setValue("assignees", [], {
-                        shouldValidate: false,
-                        shouldDirty: false,
-                    })
-                }
-            } catch {
-                if (active) {
-                    setAssigneeOptions([])
-                    setCurrentUserId(null)
-                    setCurrentUserRole(null)
-                }
-            }
-        }
-
-        void load()
-
-        return () => {
-            active = false
-        }
-    }, [projectId, form])
-
-    const onSubmit = async (data: CreateTaskInput) => {
-        const created = await createTask(data)
-        if (created) {
-            form.reset({
-                title: "",
-                description: "",
-                status: TaskStatus.BACKLOG,
-                priority: PriorityLevel.NONE,
-                projectId,
-                parentId,
-                startDate: "",
-                dueDate: "",
-                estimate: undefined,
-                assignees:
-                    currentUserRole === "Member" && currentUserId
-                        ? [currentUserId]
-                        : [],
-            })
-            onCreatedAction?.()
-        }
-    }
-
-    const canAssignOthers = currentUserRole !== "Member"
-
     return (
-        <div className="max-w-xl space-y-4">
+        <div className="max-w-xl space-y-4 wb-5 max-h-[80vh] overflow-y-auto">
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={onSubmit} className="space-y-4">
                     <input type="hidden" {...form.register("projectId")} />
                     <input type="hidden" {...form.register("parentId")} />
 
@@ -149,6 +55,7 @@ export default function CreateTaskForm({
                                 <FormControl>
                                     <Input placeholder="Nhập tiêu đề task..." {...field} />
                                 </FormControl>
+                                <FormMessage />
                             </FormItem>
                         )}
                     />
@@ -173,17 +80,16 @@ export default function CreateTaskForm({
                         render={() => (
                             <FormItem>
                                 <FormLabel>Trạng thái</FormLabel>
-
                                 <FormControl>
                                     <div className="flex h-10 w-full items-center rounded-md border bg-muted px-3 text-sm">
                                         {TaskStatus.BACKLOG}
                                     </div>
                                 </FormControl>
-
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
+
                     <FormField
                         control={form.control}
                         name="assignees"
@@ -193,6 +99,7 @@ export default function CreateTaskForm({
                                 <Select
                                     onValueChange={(value) => field.onChange(value ? [value] : [])}
                                     value={field.value?.[0] ?? ""}
+                                    disabled={!canAssignOthers}
                                 >
                                     <FormControl>
                                         <SelectTrigger>
@@ -202,9 +109,7 @@ export default function CreateTaskForm({
                                     <SelectContent>
                                         {assigneeOptions.map((option) => (
                                             <SelectItem key={option.id} value={option.id}>
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm">{option.name || option.email}</span>
-                                                </div>
+                                                <span className="text-sm">{option.name || option.email}</span>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -220,7 +125,7 @@ export default function CreateTaskForm({
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Độ ưu tiên</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Mức độ ưu tiên của task" />
@@ -267,7 +172,7 @@ export default function CreateTaskForm({
                                 <FormControl>
                                     <Input
                                         type="date"
-                                        min={form.getValues("startDate") || today}
+                                        min={form.getValues("startDate") || new Date().toISOString().slice(0, 10)}
                                         {...field}
                                         value={field.value ?? ""}
                                     />

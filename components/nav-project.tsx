@@ -31,7 +31,6 @@ import CreateTaskForm from "@/components/tasks/create-task";
 import { MemberDialog } from "@/components/projects/member-project";
 import { useProjectList} from "@/hooks/useProjectList"
 import ProjectList from "@/components/projects/project-list";
-import {Project} from "@/types/project";
 function NavProjectsContent() {
     const nav = useProjectList()
     const pathname = usePathname();
@@ -126,7 +125,7 @@ function NavProjectsContent() {
                     }
                 }}
             >
-                <DialogContent className="sm:max-w-xl">
+                <DialogContent className="sm:max-w-xl my-6">
                     <DialogHeader>
                         <DialogTitle>
                             {nav.taskDialogProjectTitle

@@ -10,3 +10,10 @@ export type StatsListFilter =
     | { kind: "overdue" }
     | { kind: "cancelled" }
     | { kind: "status"; status: string }
+export type Item = {
+    month: string
+    created: number
+    completed: number
+    overdue: number
+    carryOver?: number
+}

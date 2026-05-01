@@ -1,13 +1,11 @@
-import mongoose from "mongoose"
 import { NextRequest, NextResponse } from "next/server"
-import { jwtVerify } from "jose"
 import { connectDB } from "@/lib/db"
 import ActivityLog from "@/models/activityLog.model"
 import Project from "@/models/project.model"
 import Task from "@/models/task.model"
 import User from "@/models/user.model"
 import { PopulatedUser } from "@/types/user"
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
+import {getUserIdFromRequest} from "@/lib/jwt";
 
 function escapeRegex(value: string) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -21,19 +19,6 @@ function buildMentionMatchers(parts: { fullName: string; email: string }) {
     return [email, localPart, fullName]
         .filter((value): value is string => !!value)
         .map((value) => new RegExp(`(^|\\s)@${escapeRegex(value)}(?=\\s|$|[,.!?])`, "i"))
-}
-
-async function getUserIdFromRequest(req: NextRequest) {
-    const token = req.cookies.get("accessToken")?.value
-    if (!token) return null
-
-    try {
-        const { payload } = await jwtVerify(token, SECRET)
-        const id = (payload.id || payload.userId) as string | undefined
-        return id ?? null
-    } catch {
-        return null
-    }
 }
 
 function formatUser(userDoc: PopulatedUser | null) {

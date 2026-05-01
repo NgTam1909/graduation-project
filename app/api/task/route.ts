@@ -6,20 +6,11 @@ import Task, { TaskStatus } from "@/models/task.model"
 import Project, { IProjectMember, ProjectRole } from "@/models/project.model"
 import { createTaskSchema } from "@/lib/validations/task.validation"
 import ActivityLog, { ActivityAction } from "@/models/activityLog.model"
+import {getUserIdFromRequest} from "@/lib/jwt";
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
-
-async function getUserIdFromRequest(req: NextRequest) {
-    const token = req.cookies.get("accessToken")?.value
-    if (!token) return null
-
-    try {
-        const { payload } = await jwtVerify(token, SECRET)
-        const id = (payload.id || payload.userId) as string | undefined
-        return id ?? null
-    } catch {
-        return null
-    }
+function generateTaskCode(id: string) {
+    const suffix = id.slice(-6).toUpperCase()
+    return `TSK-${suffix}`
 }
 
 export async function POST(req: NextRequest) {
@@ -59,11 +50,11 @@ export async function POST(req: NextRequest) {
 
         let parentTask:
             | {
-                  _id: mongoose.Types.ObjectId
-                  projectId: mongoose.Types.ObjectId
-                  status: TaskStatus
-                  parentId?: mongoose.Types.ObjectId | null
-              }
+            _id: mongoose.Types.ObjectId
+            projectId: mongoose.Types.ObjectId
+            status: TaskStatus
+            parentId?: mongoose.Types.ObjectId | null
+        }
             | null = null
 
         if (rawParentId) {
@@ -141,7 +132,8 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const task = await Task.create({
+        // 👉 TẠO TASK (CHƯA CÓ CODE)
+        const task = new Task({
             ...data,
             projectId: project._id,
             creatorId: new mongoose.Types.ObjectId(userId),
@@ -149,6 +141,14 @@ export async function POST(req: NextRequest) {
             parentId: parentTask?._id,
             overDue: false,
         })
+        await task.save()
+
+        // 👉 THÊM PHẦN TẠO CODE TỪ _ID VÀ CẬP NHẬT
+        if (!task.code) {
+            const code = generateTaskCode(task._id.toString())
+            task.code = code
+            await task.save()
+        }
 
         try {
             await ActivityLog.create({
@@ -162,6 +162,7 @@ export async function POST(req: NextRequest) {
                     status: task.status,
                     priority: task.priority,
                     assignees: requestedAssignees,
+                    code: task.code,
                 },
             })
         } catch {

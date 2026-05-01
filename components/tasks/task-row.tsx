@@ -97,12 +97,12 @@ export function TaskRow({ task }: Props) {
                 }
             }}
             className={cn(
-                "border  border-black rounded-lg cursor-pointer hover:bg-black/[0.03] m-3",
+                "border  border-black rounded-lg cursor-pointer hover:bg-black/[0.03] ",
                 isWarning && "outline outline-2 outline-red-600"
             )}
         >
             {/* MOBILE CARD - chỉ hiện trên sm trở xuống */}
-            <div className="md:hidden  p-2 m-2 ">
+            <div className="xl:hidden  p-2 m-2 ">
                    <div className="text-xs text-muted-foreground">
                                 ID: {task.code}
                             </div>
@@ -132,7 +132,8 @@ export function TaskRow({ task }: Props) {
                             </div>
             </div>
             {/* DESKTOP ROW - chỉ hiện trên sm trở lên */}
-            <div className="hidden sm:grid grid-cols-[160px_1fr_160px_180px_160px]">
+
+            <div className="hidden xl:grid grid-cols-[140px_1fr_100px_150px_160px]">
                 <div className="px-5 py-4 text-sm font-semibold">{code}</div>
                 <div className="px-5 py-4 text-sm font-semibold truncate">{task.title}</div>
                 <div className="px-5 py-4 text-sm">{due}</div>

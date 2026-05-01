@@ -1,17 +1,18 @@
-"use client"
-
+// hooks/useRegisterForm.ts
 import { useState } from "react"
-import {AuthService} from "@/services/auth.service";
-export type RegisterFormData = {
-    firstName: string
-    lastName: string
-    email: string
-    phone: string
-    password: string
-    confirmPassword: string
-}
-export function useRegister() {
-    const [form, setForm] = useState({
+import { useRouter } from "next/navigation"
+import { POST_METHOD } from "@/lib/req"
+import {RegisterFormData} from "@/types/user";
+
+
+
+export function useRegisterForm() {
+    const router = useRouter()
+
+    const [showPassword, setShowPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+    const [form, setForm] = useState<RegisterFormData>({
         firstName: "",
         lastName: "",
         email: "",
@@ -22,39 +23,97 @@ export function useRegister() {
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [success, setSuccess] = useState<string | null>(null)
+    const [fieldErrors, setFieldErrors] = useState<
+        Partial<Record<keyof RegisterFormData, string>>
+    >({})
 
-    const handleSubmit = async () => {
+    const handleChange = (field: keyof RegisterFormData, value: string) => {
+        setForm((prev) => ({ ...prev, [field]: value }))
+    }
+
+    const toggleShowPassword = () => setShowPassword(!showPassword)
+    const toggleShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword)
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        setError(null)
+        setSuccess(null)
+        setFieldErrors({})
+
         if (form.password !== form.confirmPassword) {
-            setError("Mật khẩu không trùng khớp")
+            const message = "Mật khẩu xác nhận không đúng!"
+            setFieldErrors((prev) => ({ ...prev, confirmPassword: message }))
+            setError(message)
             return
         }
 
         try {
             setLoading(true)
-            setError(null)
+            await POST_METHOD("/api/auth/register", form)
 
-            await AuthService.register({
-                firstName: form.firstName,
-                lastName: form.lastName,
-                email: form.email,
-                phone: form.phone,
-                password: form.password,
-            })
+            setSuccess("Đăng ký thành công! Đang chuyển sang trang đăng nhập ...")
 
-            window.location.href = "/login"
+            setTimeout(() => {
+                router.push("/login")
+            }, 1500)
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : "Đăng ký thất bại"
-            setError(message)
+            const payload = (err as { response?: { data?: unknown } })?.response?.data as
+                | {
+                message?: string
+                errors?: Partial<Record<keyof RegisterFormData, string[]>>
+            }
+                | undefined
+
+            const serverErrors = payload?.errors
+
+            if (serverErrors) {
+                const nextFieldErrors: Partial<Record<keyof RegisterFormData, string>> = {}
+                let firstMessage: string | undefined
+
+                for (const [field, messages] of Object.entries(serverErrors)) {
+                    if (messages && messages.length > 0) {
+                        const message = messages[0]
+                        nextFieldErrors[field as keyof RegisterFormData] = message
+                        if (!firstMessage) {
+                            firstMessage = message
+                        }
+                    }
+                }
+
+                setFieldErrors(nextFieldErrors)
+                setError(firstMessage || payload?.message || "Đăng ký thất bại!")
+            } else {
+                setError(payload?.message || "Đăng ký thất bại!")
+            }
         } finally {
             setLoading(false)
         }
     }
 
+    const isFormValid =
+        form.firstName.trim() !== "" &&
+        form.lastName.trim() !== "" &&
+        form.email.trim() !== "" &&
+        form.phone.trim() !== "" &&
+        form.password.trim() !== "" &&
+        form.confirmPassword.trim() !== ""
+
     return {
+        // State
         form,
-        setForm,
-        handleSubmit,
         loading,
         error,
+        success,
+        fieldErrors,
+        showPassword,
+        showConfirmPassword,
+        // Actions
+        handleChange,
+        handleSubmit,
+        toggleShowPassword,
+        toggleShowConfirmPassword,
+        // Derived
+        isFormValid,
     }
 }

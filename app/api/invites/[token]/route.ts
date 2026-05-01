@@ -1,27 +1,13 @@
 import crypto from "crypto";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
 import { connectDB } from "@/lib/db";
 import Project, { ProjectRole, IProjectMember } from "@/models/project.model";
 import ProjectInvite from "@/models/projectInvite.model";
 import User from "@/models/user.model";
 import ActivityLog, { ActivityAction } from "@/models/activityLog.model";
+import {getUserIdFromRequest} from "@/lib/jwt";
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
-
-async function getUserIdFromRequest(req: NextRequest) {
-    const token = req.cookies.get("accessToken")?.value;
-    if (!token) return null;
-
-    try {
-        const { payload } = await jwtVerify(token, SECRET);
-        const id = (payload.id || payload.userId) as string | undefined;
-        return id ?? null;
-    } catch {
-        return null;
-    }
-}
 
 function hashToken(rawToken: string) {
     return crypto.createHash("sha256").update(rawToken).digest("hex");

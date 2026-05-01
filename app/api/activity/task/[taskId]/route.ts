@@ -1,26 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { jwtVerify } from "jose"
 import mongoose from "mongoose"
 import { connectDB } from "@/lib/db"
 import ActivityLog from "@/models/activityLog.model"
 import Task from "@/models/task.model"
 import Project from "@/models/project.model"
 import {PopulatedUser} from "@/types/user"
-
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
-
-async function getUserIdFromRequest(req: NextRequest) {
-    const token = req.cookies.get("accessToken")?.value
-    if (!token) return null
-
-    try {
-        const { payload } = await jwtVerify(token, SECRET)
-        const id = (payload.id || payload.userId) as string | undefined
-        return id ?? null
-    } catch {
-        return null
-    }
-}
+import {getUserIdFromRequest} from "@/lib/jwt";
 
 export async function GET(
     req: NextRequest,

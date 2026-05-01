@@ -41,9 +41,10 @@ async function getCurrentUsername() {
 
 export default async function DashboardPage() {
     const now = new Date()
-    const hour = new Date(
+    const vnTime = new Date(
         now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
-    ).getHours()
+    )
+        const hour= vnTime.getHours()
     const username = (await getCurrentUsername()) ?? "bạn"
     const greeting =
         hour < 4
@@ -56,13 +57,13 @@ export default async function DashboardPage() {
                         ? 'Chào buổi tối'
                         : 'Hãy chú ý sức khỏe'
 
-    const today = now.toLocaleDateString('vi-VN', {
+    const today = vnTime.toLocaleDateString('vi-VN', {
         weekday: 'long',
         day: 'numeric',
         month: 'numeric',
         year: 'numeric',
     })
-    const time = now.toLocaleTimeString('vi-VN', {
+    const time = vnTime.toLocaleTimeString('vi-VN', {
         hour: '2-digit',
         minute: '2-digit'
     })

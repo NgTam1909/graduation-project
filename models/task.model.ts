@@ -23,6 +23,7 @@ export interface ITaskComment {
 
 
 export interface ITask extends Document {
+    code: string;
     title: string;
     description?: string;
     status: TaskStatus;
@@ -49,6 +50,11 @@ export interface ITask extends Document {
 
 const TaskSchema = new Schema<ITask>(
     {
+        code: {
+            type: String,
+            unique: true,
+            sparse: true,
+        },
         title: {
             type: String,
             required: true,
@@ -149,6 +155,7 @@ const TaskSchema = new Schema<ITask>(
 
 // tìm theo project/creator/status nhanh hơn
 TaskSchema.index({ status: 1 });
+TaskSchema.index({ code: 1 });
 TaskSchema.index({ creatorId: 1 });
 TaskSchema.index({ dueDate: 1 });
 

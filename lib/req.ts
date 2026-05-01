@@ -33,26 +33,6 @@ export async function POST_METHOD(url: string, body: unknown, token?: string) {
 	}
 }
 
-export async function PUT_METHOD(url: string, body: unknown) {
-	try {
-		const { data } = await axios.put(url, body, {
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			withCredentials: true,
-		});
-
-		if (data && data.success && data.data) {
-			return data.data;
-		}
-
-		return data;
-	} catch (error) {
-		handleUnauthorized(error);
-		throw error;
-	}
-}
-
 export async function PATCH_METHOD(url: string, body: unknown) {
 	try {
 		const { data } = await axios.patch(url, body, {

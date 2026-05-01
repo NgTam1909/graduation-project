@@ -6,6 +6,7 @@ import { connectDB } from "@/lib/db"
 import User from "@/models/user.model"
 import Project from "@/models/project.model"
 import Task from "@/models/task.model"
+import {SearchProject, SearchTask, SearchUser} from "@/types/search";
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
 
@@ -29,16 +30,6 @@ function escapeRegex(value: string) {
 function toShortTaskCode(id: string) {
     const suffix = id.slice(-6).toUpperCase()
     return `TSK-${suffix}`
-}
-
-type SearchUser = { id: string; name: string; email: string }
-type SearchProject = { id: string; projectId: string; title: string; isPublic: boolean }
-type SearchTask = {
-    id: string
-    code: string
-    title: string
-    projectId: string
-    projectTitle: string
 }
 
 function includesQuery(value: unknown, q: string) {
@@ -106,7 +97,11 @@ export async function GET(req: NextRequest) {
             Task.aggregate([
                 {
                     $match: {
-                        title: { $regex: safe, $options: "i" },
+                        $or: [
+                            { title: { $regex: safe, $options: "i" } },
+                            { code: { $regex: safe, $options: "i" } },
+                            { status: { $regex: safe, $options: "i" } },
+                        ]
                     },
                 },
                 {

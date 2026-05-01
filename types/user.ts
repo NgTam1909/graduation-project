@@ -18,3 +18,11 @@ export type PopulatedUser = {
     lastName?: string
     email?: string
 }
+export interface RegisterFormData {
+    firstName: string
+    lastName: string
+    email: string
+    phone: string
+    password: string
+    confirmPassword: string
+}

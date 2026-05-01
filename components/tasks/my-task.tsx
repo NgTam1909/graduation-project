@@ -128,19 +128,17 @@ export function MyTasks() {
   }
 
   return (
-      <section className="w-full  py-10">
+      <section className="w-full py-2">
         <div className="w-full overflow-x-auto">
-          {/* Bảng - hiển thị trên mọi kích thước, TaskRow tự xử lý responsive bên trong */}
+          {/* Header */}
+          <div className="hidden xl:grid grid-cols-[140px_1fr_100px_150px_160px] gap-2 border">
+            <div className="px-4 py-2 text-sm text-center font-semibold">Mã</div>
+            <div className="px-4 py-2 text-sm text-center font-semibold">Nội dung</div>
+            <div className="px-4 py-2 text-sm text-center font-semibold">Thời gian</div>
+            <div className="px-4 py-2 text-sm text-center font-semibold">Ưu tiên</div>
+            <div className="px-4 py-2 text-sm font-semibold">Trạng thái</div>
+          </div>
           <div >
-            {/* HEADER - chỉ hiện trên desktop (sm trở lên) */}
-            <div className="hidden sm:grid grid-cols-[160px_1fr_160px_180px_160px] border-b border-black ">
-              <div className="px-5 py-4 text-sm font-bold uppercase tracking-wide">ID</div>
-              <div className="px-5 py-4 text-sm font-bold tracking-wide">Nội dung công việc</div>
-              <div className="px-5 py-4 text-sm font-bold tracking-wide">Thời hạn</div>
-              <div className="px-5 py-4 text-sm font-bold tracking-wide">Độ ưu tiên</div>
-              <div className="px-5 py-4 text-sm font-bold tracking-wide">Trạng thái</div>
-            </div>
-
             {/* Nội dung - TaskRow tự xử lý mobile/desktop */}
             {error ? (
                 <div className="px-5 py-6 text-sm text-red-600">{error}</div>
@@ -149,7 +147,9 @@ export function MyTasks() {
                   Không có công việc nào
                 </div>
             ) : (
-                sortedTasks.map((task) => <TaskRow key={task.id} task={task} />)
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-4">
+                  {sortedTasks.map((task) => <TaskRow key={task.id} task={task} />)}
+                </div>
             )}
           </div>
         </div>

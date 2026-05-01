@@ -9,14 +9,9 @@ import {
     Legend,
     Cell,
 } from "recharts"
+import {Item} from "@/types/stats";
 
-type Item = {
-    month: string
-    created: number
-    completed: number
-    overdue: number
-    carryOver?: number
-}
+
 
 type Props = {
     data: Item[]
