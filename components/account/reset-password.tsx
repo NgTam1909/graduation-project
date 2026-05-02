@@ -62,7 +62,7 @@ export function ResetPasswordFormContent() {
         <form onSubmit={handleSubmit} className="space-y-5">
 
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-slate-700 dark:text-slate-300 font-semibold">Máº­t kháº©u má»›i</Label>
+            <Label htmlFor="password" className="text-slate-700 dark:text-slate-300 font-semibold">Mật khẩu mới</Label>
             <div className="relative group">
               <Lock className="absolute left-3.5 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
               <Input
@@ -85,7 +85,7 @@ export function ResetPasswordFormContent() {
                 id="confirmPassword"
                 type={showPass ? "text" : "password"}
                 placeholder="******"
-                className={cn("pl-11 pr-11 h-12 rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:border-orange-500 focus:ring-orange-500/20")}
+                className={cn("pl-11 pr-11 h-12 rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 ")}
                 value={formData.confirmPassword}
                 onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
                 required

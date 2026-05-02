@@ -46,14 +46,14 @@ export async function sendProjectInviteEmail(
         to: email,
         subject: 'Project invitation',
         html: `
-      <p>You have been invited to join the project <strong>${projectTitle}</strong>.</p>
-      <p>Invited by: ${safeInviter}</p>
+      <p>Bạn có một lờ mời tham gia dự án <strong>${projectTitle}</strong>.</p>
+      <p>Được mời bởi: ${safeInviter}</p>
       <p>
         <a href="${link}" style="color:#4f46e5;font-weight:bold">
-          Accept the invitation
+          Chấp nhận lời mời
         </a>
       </p>
-      <p>This link will expire in 7 days.</p>
+      <p>Lời mời này sẽ có hiệu lực trong 3 ngày</p>
     `,
     });
 }

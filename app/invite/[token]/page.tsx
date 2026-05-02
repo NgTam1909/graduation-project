@@ -68,6 +68,7 @@ export default function InvitePage() {
                 projectTitle?: string;
             };
             setSuccess(data?.projectTitle ? `Joined ${data.projectTitle}` : "Invite accepted");
+            window.dispatchEvent(new Event('project:joined'));
             if (data?.projectId) {
                 setInfo((prev) =>
                     prev

@@ -10,7 +10,7 @@ import {getUserIdFromRequest} from "@/lib/jwt";
 
 function generateTaskCode(id: string) {
     const suffix = id.slice(-6).toUpperCase()
-    return `TSK-${suffix}`
+    return `${suffix}`
 }
 
 export async function POST(req: NextRequest) {
@@ -158,11 +158,12 @@ export async function POST(req: NextRequest) {
                 entityId: task._id,
                 action: ActivityAction.CREATE_TASK,
                 newValue: {
+                    code: task.code,
                     title: task.title,
                     status: task.status,
                     priority: task.priority,
                     assignees: requestedAssignees,
-                    code: task.code,
+
                 },
             })
         } catch {

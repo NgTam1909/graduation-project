@@ -1,25 +1,9 @@
 import mongoose from "mongoose"
 import { NextRequest, NextResponse } from "next/server"
-import { jwtVerify } from "jose"
-
 import { connectDB } from "@/lib/db"
 import Project from "@/models/project.model"
 import TaskModel from "@/models/task.model"
-
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
-
-async function getUserIdFromRequest(req: NextRequest) {
-    const token = req.cookies.get("accessToken")?.value
-    if (!token) return null
-
-    try {
-        const { payload } = await jwtVerify(token, SECRET)
-        const id = (payload.id || payload.userId) as string | undefined
-        return id ?? null
-    } catch {
-        return null
-    }
-}
+import {getUserIdFromRequest} from "@/lib/jwt";
 
 function escapeRegex(value: string) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")

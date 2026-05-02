@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, useEffect, useState } from "react"
+import { type ReactNode, useEffect, useState, useCallback } from "react"
 import ClickablePie from "@/components/chart/pie-chart"
 import TaskMonthlyChart from "@/components/chart/combo-chart"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,7 @@ import { Task } from "@/types/task"
 import { CheckCircle2, Clock3, ListTodo } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toTask } from "@/lib/mappers/task"
-import {TaskRow} from "@/components/tasks/task-row";
+import { TaskRow } from "@/components/tasks/task-row"
 
 type Props = {
     projectId: string
@@ -24,41 +24,46 @@ export default function AdvancedDashboard({ projectId }: Props) {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    useEffect(() => {
-        let active = true
+    // 👉 Tách riêng hàm loadTasks để tái sử dụng
+    const loadTasks = useCallback(async () => {
+        if (!projectId) return
 
-        const loadTasks = async () => {
-            try {
-                setLoading(true)
-                setError(null)
+        try {
+            setLoading(true)
+            setError(null)
 
-                const data = (await GET_METHOD(
-                    `/api/projects/${projectId}/tasks`
-                )) as ApiResponse
+            const data = (await GET_METHOD(
+                `/api/projects/${projectId}/tasks`
+            )) as ApiResponse
 
-                if (!active) return
-
-                const items = Array.isArray(data?.tasks) ? data.tasks : []
-                setTasks(items.map((item) => toTask(item, projectId)))
-            } catch {
-                if (active) {
-                    setTasks([])
-                    setError("Không thể tải danh sách task")
-                }
-            } finally {
-                if (active) setLoading(false)
-            }
-        }
-
-        loadTasks()
-
-        return () => {
-            active = false
+            const items = Array.isArray(data?.tasks) ? data.tasks : []
+            setTasks(items.map((item) => toTask(item, projectId)))
+        } catch {
+            setTasks([])
+            setError("Không thể tải danh sách task")
+        } finally {
+            setLoading(false)
         }
     }, [projectId])
 
+    // Load lần đầu
+    useEffect(() => {
+        loadTasks()
+    }, [loadTasks])
+
+    // 👉 Lắng nghe các event refresh
+    useEffect(() => {
+        const handleTaskCreated = () => {
+            loadTasks()
+        }
+        window.addEventListener('task:created', handleTaskCreated)
+
+        return () => {
+            window.removeEventListener('task:created', handleTaskCreated)
+        }
+    }, [loadTasks])
+
     const {
-        currentMonth,
         selectedMonth,
         setSelectedMonth,
         listFilter,
@@ -81,12 +86,7 @@ export default function AdvancedDashboard({ projectId }: Props) {
                     ? "overdue"
                     : listFilter.kind === "cancelled"
                         ? "cancelled"
-                    : listFilter.status
-
-    const openTaskDetail = (task: Task) => {
-        const pid = task.projectId ?? projectId
-        router.push(`/project/${pid}/tasks?taskId=${task.id}`)
-    }
+                        : listFilter.status
 
     return (
         <div className="space-y-6">
@@ -221,14 +221,14 @@ export default function AdvancedDashboard({ projectId }: Props) {
     )
 }
 
-/* CARD */
+// StatCard component giữ nguyên
 function StatCard({
-    title,
-    value,
-    icon,
-    active,
-    onClick,
-}: {
+                      title,
+                      value,
+                      icon,
+                      active,
+                      onClick,
+                  }: {
     title: string
     value: number
     icon: ReactNode
@@ -261,5 +261,3 @@ function StatCard({
         </Card>
     )
 }
-
-

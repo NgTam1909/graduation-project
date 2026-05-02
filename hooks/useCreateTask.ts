@@ -5,13 +5,13 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { createTaskSchema, CreateTaskInput } from "@/lib/validations/task.validation"
 import { createTask as createTaskRequest } from "@/services/task.service"
 import { getTaskAssignees } from "@/services/task.service"
-import { TaskStatus, PriorityLevel } from "@/types/task"
+import {TaskStatus, PriorityLevel, Task} from "@/types/task"
 import type { AssigneeOption, AssigneeResponse } from "@/types/task-detail"
 
 type UseTaskFormProps = {
     projectId: string
     parentId?: string
-    onSuccess?: () => void
+    onSuccess?: (task?: Task) => void
 }
 
 export function useCreateTask({ projectId, parentId, onSuccess }: UseTaskFormProps) {
@@ -86,12 +86,13 @@ export function useCreateTask({ projectId, parentId, onSuccess }: UseTaskFormPro
         }
     }, [currentUserRole, currentUserId, form])
 
-    // Create task function (merged from useCreateTask)
-    const createTask = async (data: CreateTaskInput) => {
+    // Create task function
+    const createTask = async (data: CreateTaskInput): Promise<Task | null> => {
         try {
             setLoading(true)
             setCreateError(null)
-            return await createTaskRequest(data)
+            const result = await createTaskRequest(data)
+            return result as Task
         } catch (err: unknown) {
             const payload = (err as { response?: { data?: { message?: string } } })?.response?.data
             const message = payload?.message ?? "Tạo thất bại!"
@@ -104,8 +105,8 @@ export function useCreateTask({ projectId, parentId, onSuccess }: UseTaskFormPro
 
     // Submit handler
     const onSubmit = async (data: CreateTaskInput) => {
-        const created = await createTask(data)
-        if (created) {
+        const createdTask = await createTask(data)
+        if (createdTask) {
             form.reset({
                 title: "",
                 description: "",
@@ -118,7 +119,12 @@ export function useCreateTask({ projectId, parentId, onSuccess }: UseTaskFormPro
                 estimate: undefined,
                 assignees: defaultAssignee,
             })
-            onSuccess?.()
+
+            // 👉 Dispatch event để các component khác refresh
+            window.dispatchEvent(new CustomEvent('task:created', {
+                detail: createdTask
+            }))
+            onSuccess?.(createdTask)
         }
     }
 

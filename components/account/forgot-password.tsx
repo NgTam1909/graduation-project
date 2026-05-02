@@ -68,7 +68,7 @@ export function ForgotPasswordForm() {
                                 className={cn(
                                     "pl-11 h-12 rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950",
                                     "text-slate-900 dark:text-white placeholder:text-slate-400",
-                                    "focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
+                                    "focus:border-gray-500 focus:ring-2 focus:ring-gray-500/20 transition-all"
                                 )}
                                 value={email}
                                 onChange={e => {
@@ -89,7 +89,7 @@ export function ForgotPasswordForm() {
 
                     <Button
                         type="submit"
-                        className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold text-base rounded-lg shadow-md shadow-orange-500/20 transition-all active:scale-[0.98]"
+                        className="w-full h-12 bg-gray-500  hover:bg-black text-white font-bold text-base rounded-lg shadow-md shadow-orange-500/20 transition-all active:scale-[0.98]"
                         disabled={loading}
                     >
                         {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <span className="flex items-center gap-2">Gửi yêu cầu <Send className="h-4 w-4" /></span>}

@@ -36,7 +36,10 @@ export default function CreateTaskForm({
     const { form, loading, error, assigneeOptions, canAssignOthers, onSubmit } = useCreateTask({
         projectId,
         parentId,
-        onSuccess: onCreatedAction,
+        onSuccess: (newTask) => {
+            console.log("Đã tạo task:", newTask?.code)
+            onCreatedAction?.()
+        },
     })
 
     return (

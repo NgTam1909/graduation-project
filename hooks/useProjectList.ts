@@ -60,7 +60,16 @@ export function useProjectList() {
             active = false
         }
     }, [])
+    useEffect(() => {
+        const handleRefresh = () => {
+            loadProjects()
+        }
+        window.addEventListener('project:joined', handleRefresh)
 
+        return () => {
+            window.removeEventListener('project:joined', handleRefresh)
+        }
+    }, [])
     const handleCreated = async () => {
         setOpen(false)
         setLoading(true)

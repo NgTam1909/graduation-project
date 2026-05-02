@@ -25,6 +25,7 @@ type NavMenuProps = {
     className?: string
 }
 
+
 export default function NavMenu({ onToggleSidebarAction, className }: NavMenuProps) {
     const router = useRouter()
     // hiển thị một phương án dự phòng ổn định trên máy chủ.

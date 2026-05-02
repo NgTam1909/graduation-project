@@ -12,7 +12,7 @@ async function verifyToken(token: string) {
     }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
     const token = request.cookies.get("accessToken")?.value
 
@@ -65,8 +65,4 @@ export async function middleware(request: NextRequest) {
             headers: requestHeaders,
         },
     })
-}
-
-export const config = {
-    matcher: ["/login", "/register", "/control/:path*", "/dashboard/:path*"],
 }

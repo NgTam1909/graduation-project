@@ -7,21 +7,7 @@ import User from "@/models/user.model"
 import Project from "@/models/project.model"
 import Task from "@/models/task.model"
 import {SearchProject, SearchTask, SearchUser} from "@/types/search";
-
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
-
-async function getUserIdFromRequest(req: NextRequest) {
-    const token = req.cookies.get("accessToken")?.value
-    if (!token) return null
-
-    try {
-        const { payload } = await jwtVerify(token, SECRET)
-        const id = (payload.id || payload.userId) as string | undefined
-        return id ?? null
-    } catch {
-        return null
-    }
-}
+import {getUserIdFromRequest} from "@/lib/jwt";
 
 function escapeRegex(value: string) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -29,7 +15,7 @@ function escapeRegex(value: string) {
 
 function toShortTaskCode(id: string) {
     const suffix = id.slice(-6).toUpperCase()
-    return `TSK-${suffix}`
+    return `${suffix}`
 }
 
 function includesQuery(value: unknown, q: string) {
@@ -156,18 +142,16 @@ export async function GET(req: NextRequest) {
         const tasksOut: SearchTask[] = (tasksAgg as Array<Record<string, unknown>>)
             .map((t) => {
                 const id = String(t._id ?? "")
+                const code = toShortTaskCode(id)
                 const title = typeof t.title === "string" ? t.title : ""
                 const projectId = typeof t.projectSlug === "string" ? t.projectSlug : ""
                 const projectTitle =
                     typeof t.projectTitle === "string" ? t.projectTitle : ""
                 if (!id || !projectId) return null
-                // Extra guard: ensure the returned task really matches the query.
-                if (!includesQuery(title, qLower)) {
-                    return null
-                }
+
                 return {
                     id,
-                    code: toShortTaskCode(id),
+                    code,
                     title,
                     projectId,
                     projectTitle,
